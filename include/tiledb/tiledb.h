@@ -934,10 +934,11 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config);
  *    parallel.<br>
  *    **Default**: 1
  * - `sm.num_tbb_threads` <br>
- *    The number of threads allocated for the TBB thread pool (if TBB is
- *    enabled). Note: this is a whole-program setting. Usually this should not
- *    be modified from the default. See also the documentation for TBB's
- *    `task_scheduler_init` class.<br>
+ *    The number of threads allocated for the TBB thread pool. Note: this
+ *    is a whole-program setting. Usually this should not be modified from
+ *    the default. See also the documentation for TBB's `task_scheduler_init`
+ *    class. When TBB is disabled, this will be used to set the level of
+ *    concurrency for generic threading where TBB is otherwise used. <br>
  *    **Default**: TBB automatic
  * - `sm.consolidation.amplification` <br>
  *    The factor by which the size of the dense fragment resulting
@@ -1010,8 +1011,9 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config);
  *    Set the Azure Storage Account key. <br>
  *    **Default**: ""
  * - `vfs.azure.blob_endpoint` <br>
- *    Set the Azure Storage Blob endpoint. This should not include an
- *    http:// or https:// prefix. <br>
+ *    Overrides the default Azure Storage Blob endpoint. If empty, the endpoint
+ *    will be constructed from the storage account name. This should not include
+ *    an http:// or https:// prefix. <br>
  *    **Default**: ""
  * - `vfs.azure.block_list_block_size` <br>
  *    The block size (in bytes) used in Azure blob block list writes.
@@ -1113,7 +1115,7 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config);
  *    **Default**: 0
  * - `vfs.s3.proxy_scheme` <br>
  *    The S3 proxy scheme. <br>
- *    **Default**: "https"
+ *    **Default**: "http"
  * - `vfs.s3.proxy_username` <br>
  *    The S3 proxy username. Note: this parameter is not serialized by
  *    `tiledb_config_save_to_file`. <br>
@@ -2033,6 +2035,84 @@ TILEDB_EXPORT int32_t tiledb_attribute_get_cell_size(
  */
 TILEDB_EXPORT int32_t tiledb_attribute_dump(
     tiledb_ctx_t* ctx, const tiledb_attribute_t* attr, FILE* out);
+
+/**
+ * Sets the default fill value for the input attribute. This value will
+ * be used for the input attribute whenever querying (1) an empty cell in
+ * a dense array, or (2) a non-empty cell (in either dense or sparse array)
+ * when values on the input attribute are missing (e.g., if the user writes
+ * a subset of the attributes in a write operation).
+ *
+ * Applicable to var-sized attributes.
+ *
+ * **Example:**
+ *
+ * @code{.c}
+ * // Assumming a int32 attribute
+ * int32_t value = 0;
+ * uint64_t size = sizeof(value);
+ * tiledb_attribute_set_fill_value(ctx, attr, &value, size);
+ *
+ * // Assumming a var char attribute
+ * const char* value = "null";
+ * uint64_t size = strlen(value);
+ * tiledb_attribute_set_fill_value(ctx, attr, value, size);
+ * @endcode
+ *
+ * @param ctx The TileDB context.
+ * @param attr The target attribute.
+ * @param value The fill value to set.
+ * @param size The fill value size in bytes.
+ * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
+ *
+ * @note A call to `tiledb_attribute_cell_val_num` sets the fill value
+ *     of the attribute to its default. Therefore, make sure you invoke
+ *     `tiledb_attribute_set_fill_value` after deciding on the number
+ *     of values this attribute will hold in each cell.
+ *
+ * @note For fixed-sized attributes, the input `size` should be equal
+ *     to the cell size.
+ */
+TILEDB_EXPORT int32_t tiledb_attribute_set_fill_value(
+    tiledb_ctx_t* ctx,
+    tiledb_attribute_t* attr,
+    const void* value,
+    uint64_t size);
+
+/**
+ * Gets the default fill value for the input attribute. This value will
+ * be used for the input attribute whenever querying (1) an empty cell in
+ * a dense array, or (2) a non-empty cell (in either dense or sparse array)
+ * when values on the input attribute are missing (e.g., if the user writes
+ * a subset of the attributes in a write operation).
+ *
+ * Applicable to both fixed-sized and var-sized attributes.
+ *
+ * **Example:**
+ *
+ * @code{.c}
+ * // Assuming a int32 attribute
+ * const int32_t* value;
+ * uint64_t size;
+ * tiledb_attribute_get_fill_value(ctx, attr, &value, &size);
+ *
+ * // Assuming a var char attribute
+ * const char* value;
+ * uint64_t size;
+ * tiledb_attribute_get_fill_value(ctx, attr, &value, &size);
+ * @endcode
+ *
+ * @param ctx The TileDB context.
+ * @param attr The target attribute.
+ * @param value A pointer to the fill value to get.
+ * @param size The size of the fill value to get.
+ * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
+ */
+TILEDB_EXPORT int32_t tiledb_attribute_get_fill_value(
+    tiledb_ctx_t* ctx,
+    tiledb_attribute_t* attr,
+    const void** value,
+    uint64_t* size);
 
 /* ********************************* */
 /*               DOMAIN              */
@@ -3168,7 +3248,9 @@ TILEDB_EXPORT int32_t tiledb_query_set_buffer_var(
  * @param name The attribute/dimension to get the buffer for. Note that the
  *     zipped coordinates have special name `TILEDB_COORDS`.
  * @param buffer The buffer to retrieve.
- * @param buffer_size A pointer to the size of the buffer.
+ * @param buffer_size A pointer to the size of the buffer. Note that this is
+ *     a double pointer and returns the original variable address from
+ *     `set_buffer`.
  * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
  */
 TILEDB_EXPORT int32_t tiledb_query_get_buffer(
@@ -3198,9 +3280,13 @@ TILEDB_EXPORT int32_t tiledb_query_get_buffer(
  * @param query The TileDB query.
  * @param name The attribute/dimension to set the buffer for.
  * @param buffer_off The offsets buffer to be retrieved.
- * @param buffer_off_size A pointer to the size of the offsets buffer.
+ * @param buffer_off_size A pointer to the size of the offsets buffer. Note that
+ *     this is a `uint_64**` pointer and returns the original variable address
+ * from `set_buffer`.
  * @param buffer_val The values buffer to be retrieved.
- * @param buffer_val_size A pointer to the size of the values buffer.
+ * @param buffer_val_size A pointer to the size of the values buffer. Note that
+ *     this is a `uint_64**` pointer and returns the original variable address
+ * from `set_buffer`.
  * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
  */
 TILEDB_EXPORT int32_t tiledb_query_get_buffer_var(
@@ -3235,11 +3321,12 @@ TILEDB_EXPORT int32_t tiledb_query_get_buffer_var(
  *      This means that cells are stored or retrieved in the array global
  *      cell order.
  *    - `TILEDB_UNORDERED`:
- *      This is applicable only to writes for sparse arrays, or for sparse
- *      writes to dense arrays. It specifies that the cells are unordered and,
- *      hence, TileDB must sort the cells in the global cell order prior to
- *      writing.
- * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
+ *      This is applicable only to reads and writes for sparse arrays, or for
+ *      sparse writes to dense arrays. For writes, it specifies that the cells
+ *      are unordered and, hence, TileDB must sort the cells in the global cell
+ *      order prior to writing. For reads, TileDB will return the cells without
+ *      any particular order, which will often lead to better performance.
+ * * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
  */
 TILEDB_EXPORT int32_t tiledb_query_set_layout(
     tiledb_ctx_t* ctx, tiledb_query_t* query, tiledb_layout_t layout);
@@ -3428,6 +3515,23 @@ TILEDB_EXPORT int32_t tiledb_query_get_type(
 TILEDB_EXPORT int32_t tiledb_query_get_layout(
     tiledb_ctx_t* ctx, tiledb_query_t* query, tiledb_layout_t* query_layout);
 
+/**
+ * Retrieves the query array.
+ *
+ * **Example:**
+ *
+ * @code{.c}
+ * tiledb_array_t* array;
+ * tiledb_query_get_array(ctx, query, &array);
+ * @endcode
+ *
+ * @param ctx The TileDB context.
+ * @param query The query.
+ * @param array The query array to be retrieved.
+ * @return `TILEDB_OK` upon success, and `TILEDB_ERR` upon error.
+ */
+TILEDB_EXPORT int32_t tiledb_query_get_array(
+    tiledb_ctx_t* ctx, tiledb_query_t* query, tiledb_array_t** array);
 /**
  * Adds a 1D range along a subarray dimension, which is in the form
  * (start, end, stride). The datatype of the range components
@@ -5156,6 +5260,28 @@ TILEDB_EXPORT int32_t tiledb_vfs_move_file(
  * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
  */
 TILEDB_EXPORT int32_t tiledb_vfs_move_dir(
+    tiledb_ctx_t* ctx,
+    tiledb_vfs_t* vfs,
+    const char* old_uri,
+    const char* new_uri);
+
+/**
+ * Copies a file. If the destination file exists, it will be overwritten.
+ *
+ * **Example:**
+ *
+ * @code{.c}
+ * tiledb_vfs_copy_file(
+ * ctx, vfs, "hdfs:///temp/my_file", "hdfs::///new_file");
+ * @endcode
+ *
+ * @param ctx The TileDB context.
+ * @param vfs The virtual filesystem object.
+ * @param old_uri The old URI.
+ * @param new_uri The new URI.
+ * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
+ */
+TILEDB_EXPORT int32_t tiledb_vfs_copy_file(
     tiledb_ctx_t* ctx,
     tiledb_vfs_t* vfs,
     const char* old_uri,

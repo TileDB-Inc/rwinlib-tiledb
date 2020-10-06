@@ -263,10 +263,11 @@ class Config {
    *    parallel.<br>
    *    **Default**: 1
    * - `sm.num_tbb_threads` <br>
-   *    The number of threads allocated for the TBB thread pool (if TBB is
-   *    enabled). Note: this is a whole-program setting. Usually this should not
-   *    be modified from the default. See also the documentation for TBB's
-   *    `task_scheduler_init` class.<br>
+   *    The number of threads allocated for the TBB thread pool. Note: this
+   *    is a whole-program setting. Usually this should not be modified from
+   *    the default. See also the documentation for TBB's `task_scheduler_init`
+   *    class. When TBB is disabled, this will be used to set the level of
+   *    concurrency for generic threading where TBB is otherwise used. <br>
    *    **Default**: TBB automatic
    * - `sm.consolidation.amplification` <br>
    *    The factor by which the size of the dense fragment resulting
@@ -339,8 +340,9 @@ class Config {
    *    Set the Azure Storage Account key. <br>
    *    **Default**: ""
    * - `vfs.azure.blob_endpoint` <br>
-   *    Set the Azure Storage Blob endpoint. This should not include an
-   *    http:// or https:// prefix. <br>
+   *    Overrides the default Azure Storage Blob endpoint. If empty, the
+   * endpoint will be constructed from the storage account name. This should not
+   * include an http:// or https:// prefix. <br>
    *    **Default**: ""
    * - `vfs.azure.block_list_block_size` <br>
    *    The block size (in bytes) used in Azure blob block list writes.
@@ -442,7 +444,7 @@ class Config {
    *    **Default**: 0
    * - `vfs.s3.proxy_scheme` <br>
    *    The proxy scheme. <br>
-   *    **Default**: "https"
+   *    **Default**: "http"
    * - `vfs.s3.proxy_username` <br>
    *    The proxy username. Note: this parameter is not serialized by
    *    `tiledb_config_save_to_file`. <br>
