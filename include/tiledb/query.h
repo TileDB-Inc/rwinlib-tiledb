@@ -1,5 +1,5 @@
 /**
- * @file   tiledb_cpp_api_query.h
+ * @file   query.h
  *
  * @author Ravi Gaddipati
  *
@@ -120,7 +120,7 @@ class Query {
    * // Open the array for writing
    * tiledb::Context ctx;
    * tiledb::Array array(ctx, "my_array", TILEDB_WRITE);
-   * Query query(ctx, array, TILEDB_WRITE);
+   * tiledb::Query query(ctx, array, TILEDB_WRITE);
    * @endcode
    *
    * @param ctx TileDB context
@@ -387,7 +387,7 @@ class Query {
           std::pair<uint64_t, uint64_t>>();  // Query hasn't been submitted
     for (const auto& b_it : buff_sizes_) {
       auto attr_name = b_it.first;
-      auto size_pair = b_it.second;
+      auto size_tuple = b_it.second;
       auto var =
           ((attr_name != "__coords") &&
            ((schema_.has_attribute(attr_name) &&
@@ -396,17 +396,95 @@ class Query {
              schema_.domain().dimension(attr_name).cell_val_num() ==
                  TILEDB_VAR_NUM)));
       auto element_size = element_sizes_.find(attr_name)->second;
-      elements[attr_name] = (var) ? std::pair<uint64_t, uint64_t>(
-                                        size_pair.first / sizeof(uint64_t),
-                                        size_pair.second / element_size) :
-                                    std::pair<uint64_t, uint64_t>(
-                                        0, size_pair.second / element_size);
+      elements[attr_name] = var ?
+                                std::pair<uint64_t, uint64_t>(
+                                    std::get<0>(size_tuple) / sizeof(uint64_t),
+                                    std::get<1>(size_tuple) / element_size) :
+                                std::pair<uint64_t, uint64_t>(
+                                    0, std::get<1>(size_tuple) / element_size);
     }
     return elements;
   }
 
   /**
-   * Adds a 1D range along a subarray dimension, in the form
+   * Returns the number of elements in the result buffers from a read query.
+   * This is a map from the attribute name to a tuple of values.
+   *
+   * The first is number of elements (offsets) for var size attributes, and the
+   * second is number of elements in the data buffer. For fixed sized attributes
+   * (and coordinates), the first is always 0. The third element is the size of
+   * the validity bytemap buffer.
+   *
+   *
+   * For variable sized attributes: the first value is the
+   * number of cells read, i.e. the number of offsets read for the attribute.
+   * The second value is the total number of elements in the data buffer. For
+   * example, a read query on a variable-length `float` attribute that reads
+   * three cells would return 3 for the first number in the pair. If the total
+   * amount of `floats` read across the three cells was 10, then the second
+   * number in the pair would be 10.
+   *
+   * For fixed-length attributes, the first value is always 0. The second value
+   * is the total number of elements in the data buffer. For example, a read
+   * query on a single `float` attribute that reads three cells would return 3
+   * for the second value. A read query on a `float` attribute with cell_val_num
+   * 2 that reads three cells would return 3 * 2 = 6 for the second value.
+   *
+   * If the query has not been submitted, an empty map is returned.
+   *
+   * **Example:**
+   * @code{.cpp}
+   * // Submit a read query.
+   * query.submit();
+   * auto result_el = query.result_buffer_elements_nullable();
+   *
+   * // For fixed-sized attributes, the second tuple element is the number of
+   * // elements that were read for the attribute across all cells. Note: number
+   * // of elements and not number of bytes.
+   * auto num_a1_elements = std::get<1>(result_el["a1"]);
+   *
+   * // In variable attributes, e.g. std::string type, need two buffers,
+   * // one for offsets and one for cell data ("elements").
+   * auto num_a2_offsets = std::get<0>(result_el["a2"]);
+   * auto num_a2_elements = std::get<1>(result_el["a2"]);
+   *
+   * // For both fixed-size and variable-sized attributes, the third tuple
+   * // element is the number of elements in the validity bytemap.
+   * auto num_a1_validity_values = std::get<2>(result_el["a1"]);
+   * auto num_a2_validity_values = std::get<2>(result_el["a2"]);
+   * @endcode
+   */
+  std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, uint64_t>>
+  result_buffer_elements_nullable() const {
+    std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, uint64_t>>
+        elements;
+    if (buff_sizes_.empty())
+      return std::unordered_map<
+          std::string,
+          std::tuple<uint64_t, uint64_t, uint64_t>>();  // Query hasn't been
+                                                        // submitted
+    for (const auto& b_it : buff_sizes_) {
+      auto attr_name = b_it.first;
+      auto size_tuple = b_it.second;
+      auto var = schema_.has_attribute(attr_name) &&
+                 schema_.attribute(attr_name).cell_val_num() == TILEDB_VAR_NUM;
+      auto element_size = element_sizes_.find(attr_name)->second;
+      elements[attr_name] = var ?
+                                std::tuple<uint64_t, uint64_t, uint64_t>(
+                                    std::get<0>(size_tuple) / sizeof(uint64_t),
+                                    std::get<1>(size_tuple) / element_size,
+                                    std::get<2>(size_tuple) / sizeof(uint8_t)) :
+                                std::tuple<uint64_t, uint64_t, uint64_t>(
+                                    0,
+                                    std::get<1>(size_tuple) / element_size,
+                                    std::get<2>(size_tuple) / sizeof(uint8_t));
+    }
+
+    return elements;
+  }
+
+  /**
+   * Adds a 1D range along a subarray dimension index, in the form
    * (start, end, stride). The datatype of the range
    * must be the same as the dimension datatype.
    *
@@ -442,7 +520,44 @@ class Query {
   }
 
   /**
-   * Adds a 1D string range along a subarray dimension, in the form
+   * Adds a 1D range along a subarray dimension name, specified by its name, in
+   * the form (start, end, stride). The datatype of the range must be the same
+   * as the dimension datatype.
+   *
+   * **Example:**
+   *
+   * @code{.cpp}
+   * // Set a 1D range on dimension "rows", assuming the domain type is int64.
+   * int64_t start = 10;
+   * int64_t end = 20;
+   * const std::string dim_name = "rows";
+   * // Stride is optional
+   * subarray.add_range(dim_name, start, end);
+   * @endcode
+   *
+   * @tparam T The dimension datatype
+   * @param dim_name The name of the dimension to add the range to.
+   * @param start The range start to add.
+   * @param end The range end to add.
+   * @param stride The range stride to add.
+   * @return Reference to this Query
+   */
+  template <class T>
+  Query& add_range(const std::string& dim_name, T start, T end, T stride = 0) {
+    impl::type_check<T>(schema_.domain().dimension(dim_name).type());
+    auto& ctx = ctx_.get();
+    ctx.handle_error(tiledb_query_add_range_by_name(
+        ctx.ptr().get(),
+        query_.get(),
+        dim_name.c_str(),
+        &start,
+        &end,
+        (stride == 0) ? nullptr : &stride));
+    return *this;
+  }
+
+  /**
+   * Adds a 1D string range along a subarray dimension index, in the form
    * (start, end). Applicable only to variable-sized dimensions
    *
    * **Example:**
@@ -459,7 +574,6 @@ class Query {
    * @param dim_idx The index of the dimension to add the range to.
    * @param start The range start to add.
    * @param end The range end to add.
-   * @param stride The range stride to add.
    * @return Reference to this Query
    */
   Query& add_range(
@@ -478,7 +592,45 @@ class Query {
   }
 
   /**
-   * Retrieves the number of ranges for a given dimension.
+   * Adds a 1D string range along a subarray dimension name, in the form (start,
+   * end). Applicable only to variable-sized dimensions
+   *
+   * **Example:**
+   *
+   * @code{.cpp}
+   * // Set a 1D range on dimension "rows", assuming the domain type is int64.
+   * int64_t start = 10;
+   * int64_t end = 20;
+   * const std::string dim_name = "rows";
+   * // Stride is optional
+   * subarray.add_range(dim_name, start, end);
+   * @endcode
+   *
+   * @tparam T The dimension datatype
+   * @param dim_name The name of the dimension to add the range to.
+   * @param start The range start to add.
+   * @param end The range end to add.
+   * @return Reference to this Query
+   */
+  Query& add_range(
+      const std::string& dim_name,
+      const std::string& start,
+      const std::string& end) {
+    impl::type_check<char>(schema_.domain().dimension(dim_name).type());
+    auto& ctx = ctx_.get();
+    ctx.handle_error(tiledb_query_add_range_var_by_name(
+        ctx.ptr().get(),
+        query_.get(),
+        dim_name.c_str(),
+        start.c_str(),
+        start.size(),
+        end.c_str(),
+        end.size()));
+    return *this;
+  }
+
+  /**
+   * Retrieves the number of ranges for a given dimension index.
    *
    * **Example:**
    *
@@ -499,7 +651,28 @@ class Query {
   }
 
   /**
-   * Retrieves a range for a given dimension and range id.
+   * Retrieves the number of ranges for a given dimension name.
+   *
+   * **Example:**
+   *
+   * @code{.cpp}
+   * unsigned dim_name = "rows";
+   * uint64_t range_num = query.range_num(dim_name);
+   * @endcode
+   *
+   * @param dim_name The dimension name.
+   * @return The number of ranges.
+   */
+  uint64_t range_num(const std::string& dim_name) const {
+    auto& ctx = ctx_.get();
+    uint64_t range_num;
+    ctx.handle_error(tiledb_query_get_range_num_from_name(
+        ctx.ptr().get(), query_.get(), dim_name.c_str(), &range_num));
+    return range_num;
+  }
+
+  /**
+   * Retrieves a range for a given dimension index and range id.
    * The template datatype must be the same as that of the
    * underlying array.
    *
@@ -536,8 +709,45 @@ class Query {
   }
 
   /**
-   * Retrieves a range for a given variable length string dimension and range
-   * id.
+   * Retrieves a range for a given dimension name and range id.
+   * The template datatype must be the same as that of the
+   * underlying array.
+   *
+   * **Example:**
+   *
+   * @code{.cpp}
+   * unsigned dim_name = "rows";
+   * unsigned range_idx = 0;
+   * auto range = query.range<int32_t>(dim_name, range_idx);
+   * @endcode
+   *
+   * @tparam T The dimension datatype.
+   * @param dim_name The dimension name.
+   * @param range_idx The range index.
+   * @return A triplet of the form (start, end, stride).
+   */
+  template <class T>
+  std::array<T, 3> range(const std::string& dim_name, uint64_t range_idx) {
+    impl::type_check<T>(schema_.domain().dimension(dim_name).type());
+    auto& ctx = ctx_.get();
+    const void *start, *end, *stride;
+    ctx.handle_error(tiledb_query_get_range_from_name(
+        ctx.ptr().get(),
+        query_.get(),
+        dim_name.c_str(),
+        range_idx,
+        &start,
+        &end,
+        &stride));
+    std::array<T, 3> ret = {{*(const T*)start,
+                             *(const T*)end,
+                             (stride == nullptr) ? 0 : *(const T*)stride}};
+    return ret;
+  }
+
+  /**
+   * Retrieves a range for a given variable length string dimension index and
+   * range id.
    *
    * **Example:**
    *
@@ -574,6 +784,50 @@ class Query {
   }
 
   /**
+   * Retrieves a range for a given variable length string dimension name and
+   * range id.
+   *
+   * **Example:**
+   *
+   * @code{.cpp}
+   * unsigned dim_name = "rows";
+   * unsigned range_idx = 0;
+   * std::array<std::string, 2> range = query.range(dim_name, range_idx);
+   * @endcode
+   *
+   * @param dim_name The dimension name.
+   * @param range_idx The range index.
+   * @return A pair of the form (start, end).
+   */
+  std::array<std::string, 2> range(
+      const std::string& dim_name, uint64_t range_idx) {
+    impl::type_check<char>(schema_.domain().dimension(dim_name).type());
+    auto& ctx = ctx_.get();
+    uint64_t start_size, end_size;
+    ctx.handle_error(tiledb_query_get_range_var_size_from_name(
+        ctx.ptr().get(),
+        query_.get(),
+        dim_name.c_str(),
+        range_idx,
+        &start_size,
+        &end_size));
+
+    std::string start;
+    start.resize(start_size);
+    std::string end;
+    end.resize(end_size);
+    ctx.handle_error(tiledb_query_get_range_var_from_name(
+        ctx.ptr().get(),
+        query_.get(),
+        dim_name.c_str(),
+        range_idx,
+        &start[0],
+        &end[0]));
+    std::array<std::string, 2> ret = {{std::move(start), std::move(end)}};
+    return ret;
+  }
+
+  /**
    * Retrieves the estimated result size for a fixed-size attribute.
    *
    * **Example:**
@@ -599,16 +853,16 @@ class Query {
    * **Example:**
    *
    * @code{.cpp}
-   * std::pair<uint64_t, uint64_t> est_size =
+   * std::array<uint64_t, 2> est_size =
    *     query.est_result_size_var("attr1");
    * @endcode
    *
    * @param attr_name The attribute name.
-   * @return A pair with first element containing the estimated number of
-   *    result offsets, and second element containing the estimated number of
-   *    result value bytes.
+   * @return An array with first element containing the estimated size of
+   *    the result offsets in bytes, and second element containing the
+   *    estimated size of the result values in bytes.
    */
-  std::pair<uint64_t, uint64_t> est_result_size_var(
+  std::array<uint64_t, 2> est_result_size_var(
       const std::string& attr_name) const {
     auto& ctx = ctx_.get();
     uint64_t size_off = 0, size_val = 0;
@@ -618,7 +872,69 @@ class Query {
         attr_name.c_str(),
         &size_off,
         &size_val));
-    return std::make_pair(size_off / sizeof(uint64_t), size_val);
+    return {size_off, size_val};
+  }
+
+  /**
+   * Retrieves the estimated result size for a fixed-size, nullable attribute.
+   *
+   * **Example:**
+   *
+   * @code{.cpp}
+   * std::array<uint64_t, 2> est_size =
+   *    query.est_result_size_nullable("attr1");
+   * @endcode
+   *
+   * @param attr_name The attribute name.
+   * @return An array with first element containing the estimated size of
+   *    the result values in bytes, and second element containing the
+   *    estimated size of the result validity values in bytes.
+   */
+  std::array<uint64_t, 2> est_result_size_nullable(
+      const std::string& attr_name) const {
+    auto& ctx = ctx_.get();
+    uint64_t size_val = 0;
+    uint64_t size_validity = 0;
+    ctx.handle_error(tiledb_query_get_est_result_size_nullable(
+        ctx.ptr().get(),
+        query_.get(),
+        attr_name.c_str(),
+        &size_val,
+        &size_validity));
+    return {size_val, size_validity};
+  }
+
+  /**
+   * Retrieves the estimated result size for a variable-size, nullable
+   * attribute.
+   *
+   * **Example:**
+   *
+   * @code{.cpp}
+   * std::array<uint64_t, 3> est_size =
+   *     query.est_result_size_var_nullable("attr1");
+   * @endcode
+   *
+   * @param attr_name The attribute name.
+   * @return An array with first element containing the estimated size of
+   *    the offset values in bytes, second element containing the
+   *    estimated size of the result values in bytes, and the third element
+   *    containing the estimated size of the validity values in bytes.
+   */
+  std::array<uint64_t, 3> est_result_size_var_nullable(
+      const std::string& attr_name) const {
+    auto& ctx = ctx_.get();
+    uint64_t size_off = 0;
+    uint64_t size_val = 0;
+    uint64_t size_validity = 0;
+    ctx.handle_error(tiledb_query_get_est_result_size_var_nullable(
+        ctx.ptr().get(),
+        query_.get(),
+        attr_name.c_str(),
+        &size_off,
+        &size_val,
+        &size_validity));
+    return {size_off, size_val, size_validity};
   }
 
   /**
@@ -1094,6 +1410,248 @@ class Query {
   }
 
   /**
+   * Sets a buffer for a fixed-sized, nullable attribute.
+   *
+   * **Example:**
+   * @code{.cpp}
+   * tiledb::Context ctx;
+   * tiledb::Array array(ctx, array_name, TILEDB_WRITE);
+   * int data_a1[] = {0, 1, 2, 3};
+   * uint8_t validity_bytemap[] = {1, 1, 0, 1};
+   * Query query(ctx, array);
+   * query.set_buffer("a1", data_a1, 4, validity_bytemap, 4);
+   * @endcode
+   *
+   * @note set_buffer(std::string, std::vector) is preferred as it is safer.
+   *
+   * @tparam T Attribute value type
+   * @param name Attribute name
+   * @param data Buffer array pointer with elements of the
+   *     attribute type.
+   * @param data_nelements Number of array elements in `data`
+   * @param validity_bytemap The validity bytemap buffer.
+   * @param validity_bytemap_nelements The number of values within
+   *     `validity_bytemap_nelements`
+   **/
+  template <typename T>
+  Query& set_buffer_nullable(
+      const std::string& name,
+      T* data,
+      uint64_t data_nelements,
+      uint8_t* validity_bytemap,
+      uint64_t validity_bytemap_nelements) {
+    // Checks
+    auto is_attr = schema_.has_attribute(name);
+    if (!is_attr)
+      throw TileDBError(
+          std::string("Cannot set buffer; Attribute '") + name +
+          "' does not exist");
+    else
+      impl::type_check<T>(schema_.attribute(name).type());
+
+    return set_buffer_nullable(
+        name,
+        data,
+        data_nelements,
+        sizeof(T),
+        validity_bytemap,
+        validity_bytemap_nelements);
+  }
+
+  /**
+   * Sets a buffer for a fixed-sized, nullable attribute.
+   *
+   * **Example:**
+   * @code{.cpp}
+   * tiledb::Context ctx;
+   * tiledb::Array array(ctx, array_name, TILEDB_WRITE);
+   * std::vector<int> data_a1 = {0, 1, 2, 3};
+   * std::vector<uint8_t> validity_bytemap = {1, 1, 0, 1};
+   * Query query(ctx, array);
+   * query.set_buffer("a1", data_a1, validity_bytemap);
+   * @endcode
+   *
+   * @tparam T Attribute value type
+   * @param name Attribute name
+   * @param buf Buffer vector with elements of the attribute/dimension type.
+   * @param validity_bytemap Buffer vector with elements of the attribute
+   *     validity values.
+   **/
+  template <typename T>
+  Query& set_buffer_nullable(
+      const std::string& name,
+      std::vector<T>& buf,
+      std::vector<uint8_t>& validity_bytemap) {
+    return set_buffer_nullable(
+        name,
+        buf.data(),
+        buf.size(),
+        sizeof(T),
+        validity_bytemap.data(),
+        validity_bytemap.size());
+  }
+
+  /**
+   * Sets a buffer for a fixed-sized, nullable attribute.
+   *
+   * @note This unsafe version does not perform type checking; the given buffer
+   * is assumed to be the correct type, and the size of an element in the given
+   * buffer is assumed to be the size of the datatype of the attribute.
+   *
+   * @param nam Attribute name
+   * @param data Buffer array pointer with elements of the attribute type.
+   * @param data_nelements Number of array elements in buffer
+   * @param validity_bytemap The validity bytemap buffer.
+   * @param validity_bytemap_nelements The number of values within
+   *     `validity_bytemap_nelements`
+   **/
+  Query& set_buffer_nullable(
+      const std::string& name,
+      void* data,
+      uint64_t data_nelements,
+      uint8_t* validity_bytemap,
+      uint64_t validity_bytemap_nelements) {
+    // Checks
+    auto is_attr = schema_.has_attribute(name);
+    if (!is_attr)
+      throw TileDBError(
+          std::string("Cannot set buffer; Attribute '") + name +
+          "' does not exist");
+
+    // Compute element size (in bytes).
+    size_t element_size = tiledb_datatype_size(schema_.attribute(name).type());
+
+    return set_buffer_nullable(
+        name,
+        data,
+        data_nelements,
+        element_size,
+        validity_bytemap,
+        validity_bytemap_nelements);
+  }
+
+  /**
+   * Sets a buffer for a variable-sized, nullable attribute.
+   *
+   * @note This unsafe version does not perform type checking; the given buffer
+   * is assumed to be the correct type, and the size of an element in the given
+   * buffer is assumed to be the size of the datatype of the attribute.
+   *
+   * @param name Attribute name
+   * @param offsets Offsets array pointer where a new element begins in the data
+   *        buffer.
+   * @param offsets_nelements Number of elements in offsets buffer.
+   * @param data Buffer array pointer with elements of the attribute type.
+   * @param data_nelements Number of array elements in data buffer.
+   * @param validity_bytemap The validity bytemap buffer.
+   * @param validity_bytemap_nelements The number of values within
+   *     `validity_bytemap_nelements`
+   **/
+  Query& set_buffer_nullable(
+      const std::string& name,
+      uint64_t* offsets,
+      uint64_t offset_nelements,
+      void* data,
+      uint64_t data_nelements,
+      uint8_t* validity_bytemap,
+      uint64_t validity_bytemap_nelements) {
+    // Checks
+    auto is_attr = schema_.has_attribute(name);
+    if (!is_attr)
+      throw TileDBError(
+          std::string("Cannot set buffer; Attribute '") + name +
+          "' does not exist");
+
+    // Compute element size (in bytes).
+    auto type = schema_.attribute(name).type();
+    size_t element_size = tiledb_datatype_size(type);
+
+    return set_buffer_nullable(
+        name,
+        offsets,
+        offset_nelements,
+        data,
+        data_nelements,
+        element_size,
+        validity_bytemap,
+        validity_bytemap_nelements);
+  }
+
+  /**
+   * Sets a buffer for a variable-sized, nullable attribute.
+   *
+   * **Example:**
+   * @code{.cpp}
+   * tiledb::Context ctx;
+   * tiledb::Array array(ctx, array_name, TILEDB_WRITE);
+   * std::vector<int> data_a1 = {0, 1, 2, 3};
+   * std::vector<uint64_t> offsets_a1 = {0, 8};
+   * std::vector<uint8_t> validity_bytemap = {1, 1, 0, 1};
+   * Query query(ctx, array);
+   * query.set_buffer("a1", offsets_a1, data_a1, validity_bytemap);
+   * @endcode
+   *
+   * @tparam T Attribute value type
+   * @param name Attribute name
+   * @param offsets Offsets where a new element begins in the data buffer.
+   * @param data Buffer vector with elements of the attribute type.
+   *        For variable sized attributes, the buffer should be flattened. E.x.
+   *        an attribute of type std::string should have a buffer Vec type of
+   *        std::string, where the values of each cell are concatenated.
+   * @param validity_bytemap Buffer vector with elements of the attribute
+   *     validity values.
+   **/
+  template <typename T>
+  Query& set_buffer_nullable(
+      const std::string& name,
+      std::vector<uint64_t>& offsets,
+      std::vector<T>& data,
+      std::vector<uint8_t>& validity_bytemap) {
+    // Checks
+    auto is_attr = schema_.has_attribute(name);
+    if (!is_attr)
+      throw TileDBError(
+          std::string("Cannot set buffer; Attribute '") + name +
+          "' does not exist");
+    else
+      impl::type_check<T>(schema_.attribute(name).type());
+
+    return set_buffer_nullable(
+        name,
+        offsets.data(),
+        offsets.size(),
+        data.data(),
+        data.size(),
+        sizeof(T),
+        validity_bytemap.data(),
+        validity_bytemap.size());
+  }
+
+  /**
+   * Sets a buffer for a variable-sized, nullable attribute.
+   *
+   * @tparam T Attribute value type
+   * @param attr Attribute name
+   * @param buf Pair of offset, data, validity bytemap buffers
+   **/
+  template <typename T>
+  Query& set_buffer_nullable(
+      const std::string& name,
+      std::tuple<std::vector<uint64_t>, std::vector<T>, std::vector<uint8_t>>&
+          buf) {
+    // Checks
+    auto is_attr = schema_.has_attribute(name);
+    if (!is_attr)
+      throw TileDBError(
+          std::string("Cannot set buffer; Attribute '") + name +
+          "' does not exist");
+    impl::type_check<T>(schema_.attribute(name).type());
+
+    return set_buffer_nullable(
+        name, std::get<0>(buf), std::get<1>(buf), std::get<2>(buf));
+  }
+
+  /**
    * Gets a buffer for a fixed-sized attribute/dimension.
    *
    * @param name Attribute/dimension name
@@ -1172,6 +1730,107 @@ class Query {
     return *this;
   }
 
+  /**
+   * Gets a buffer for a fixed-sized, nullable attribute.
+   *
+   * @param name Attribute name
+   * @param data Buffer array pointer with elements of the attribute type.
+   * @param data_nelements Number of array elements.
+   * @param data_element_size Size of array elements (in bytes).
+   * @param validity_bytemap Buffer array pointer with elements of the
+   *     attribute validity values.
+   * @param validity_bytemap_nelements Number of validity bytemap elements.
+   **/
+  Query& get_buffer_nullable(
+      const std::string& name,
+      void** data,
+      uint64_t* data_nelements,
+      uint64_t* data_element_size,
+      uint8_t** validity_bytemap,
+      uint64_t* validity_bytemap_nelements) {
+    auto ctx = ctx_.get();
+    uint64_t* data_nbytes = nullptr;
+    uint64_t* validity_bytemap_nbytes = nullptr;
+    auto elem_size_iter = element_sizes_.find(name);
+    if (elem_size_iter == element_sizes_.end()) {
+      throw TileDBError(
+          "[TileDB::C++API] Error: No buffer set for attribute '" + name +
+          "'!");
+    }
+
+    ctx.handle_error(tiledb_query_get_buffer_nullable(
+        ctx.ptr().get(),
+        query_.get(),
+        name.c_str(),
+        data,
+        &data_nbytes,
+        validity_bytemap,
+        &validity_bytemap_nbytes));
+
+    assert(*data_nbytes % elem_size_iter->second == 0);
+
+    *data_nelements = *data_nbytes / elem_size_iter->second;
+    *data_element_size = elem_size_iter->second;
+    *validity_bytemap_nelements = *validity_bytemap_nbytes / sizeof(uint8_t);
+
+    return *this;
+  }
+
+  /**
+   * Gets a buffer for a var-sized, nullable attribute.
+   *
+   * @param name Attribute name
+   * @param offsets Offsets array pointer with elements of uint64_t type.
+   * @param offsets_nelements Number of array elements.
+   * @param data Buffer array pointer with elements of the attribute type.
+   * @param data_nelements Number of array elements.
+   * @param element_size Size of array elements (in bytes).
+   * @param validity_bytemap Buffer array pointer with elements of the
+   *     attribute validity values.
+   * @param validity_bytemap_nelements Number of validity bytemap elements.
+   **/
+  Query& get_buffer_nullable(
+      const std::string& name,
+      uint64_t** offsets,
+      uint64_t* offsets_nelements,
+      void** data,
+      uint64_t* data_nelements,
+      uint64_t* element_size,
+      uint8_t** validity_bytemap,
+      uint64_t* validity_bytemap_nelements) {
+    auto ctx = ctx_.get();
+    uint64_t* offsets_nbytes = nullptr;
+    uint64_t* data_nbytes = nullptr;
+    uint64_t* validity_bytemap_nbytes = nullptr;
+    auto elem_size_iter = element_sizes_.find(name);
+    if (elem_size_iter == element_sizes_.end()) {
+      throw TileDBError(
+          "[TileDB::C++API] Error: No buffer set for attribute '" + name +
+          "'!");
+    }
+
+    ctx.handle_error(tiledb_query_get_buffer_var_nullable(
+        ctx.ptr().get(),
+        query_.get(),
+        name.c_str(),
+        offsets,
+        &offsets_nbytes,
+        data,
+        &data_nbytes,
+        validity_bytemap,
+        &validity_bytemap_nbytes));
+
+    assert(*data_nbytes % elem_size_iter->second == 0);
+    assert(*offsets_nbytes % sizeof(uint64_t) == 0);
+
+    *data_nelements = (*data_nbytes) / elem_size_iter->second;
+    *offsets_nelements = (*offsets_nbytes) / sizeof(uint64_t);
+    *element_size = elem_size_iter->second;
+    *validity_bytemap_nelements = *validity_bytemap_nbytes / sizeof(uint8_t);
+
+    return *this;
+  }
+
   /* ********************************* */
   /*         STATIC FUNCTIONS          */
   /* ********************************* */
@@ -1212,13 +1871,15 @@ class Query {
 
   /**
    * The buffer sizes that were set along with the buffers to the TileDB
-   * query. It is a map from the attribute name to a pair of sizes.
-   * For var-sized attributes, the first element of the pair is the
+   * query. It is a map from the attribute name to a tuple of sizes.
+   * For var-sized attributes, the first element of the tuple is the
    * offsets size and the second is the var-sized values size. For
    * fixed-sized attributes, the first is always 0, and the second is
-   * the values size. All sizes are in bytes.
+   * the values size. All sizes are in bytes. If the attribute is nullable,
+   * the third element in the tuple is the size of the validity buffer.
    */
-  std::unordered_map<std::string, std::pair<uint64_t, uint64_t>> buff_sizes_;
+  std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, uint64_t>>
+      buff_sizes_;
 
   /**
    * Stores the size of a single element for the buffer set for a given
@@ -1263,14 +1924,14 @@ class Query {
       size_t element_size) {
     auto ctx = ctx_.get();
     size_t size = nelements * element_size;
-    buff_sizes_[attr] = std::pair<uint64_t, uint64_t>(0, size);
+    buff_sizes_[attr] = std::tuple<uint64_t, uint64_t, uint64_t>(0, size, 0);
     element_sizes_[attr] = element_size;
     ctx.handle_error(tiledb_query_set_buffer(
         ctx.ptr().get(),
         query_.get(),
         attr.c_str(),
         buff,
-        &(buff_sizes_[attr].second)));
+        &std::get<1>(buff_sizes_[attr])));
     return *this;
   }
 
@@ -1285,7 +1946,7 @@ class Query {
    * @param data Buffer array pointer with elements of the attribute type.
    *        For variable sized attributes, the buffer should be flattened.
    * @param data_nelements Number of array elements in data buffer.
-   * @param element_size Size of data array elements (in bytes).
+   * @param data_element_size Size of data array elements (in bytes).
    **/
   Query& set_buffer(
       const std::string& attr,
@@ -1293,20 +1954,99 @@ class Query {
       uint64_t offset_nelements,
       void* data,
       uint64_t data_nelements,
-      size_t element_size) {
+      size_t data_element_size) {
     auto ctx = ctx_.get();
-    auto data_size = data_nelements * element_size;
+    auto data_size = data_nelements * data_element_size;
     auto offset_size = offset_nelements * sizeof(uint64_t);
-    element_sizes_[attr] = element_size;
-    buff_sizes_[attr] = std::pair<uint64_t, uint64_t>(offset_size, data_size);
+    element_sizes_[attr] = data_element_size;
+    buff_sizes_[attr] =
+        std::tuple<uint64_t, uint64_t, uint64_t>(offset_size, data_size, 0);
     ctx.handle_error(tiledb_query_set_buffer_var(
         ctx.ptr().get(),
         query_.get(),
         attr.c_str(),
         offsets,
-        &(buff_sizes_[attr].first),
+        &std::get<0>(buff_sizes_[attr]),
         data,
-        &(buff_sizes_[attr].second)));
+        &std::get<1>(buff_sizes_[attr])));
+    return *this;
+  }
+
+  /**
+   * Sets a buffer for a nullable, fixed-sized attribute.
+   *
+   * @param attr Attribute name
+   * @param data Buffer array pointer with elements of the attribute type.
+   * @param data_nelements Number of array elements.
+   * @param data_element_size Size of array elements (in bytes).
+   * @param validity_bytemap Buffer array pointer with validity bytemap values.
+   * @param validity_bytemap_nelements Number of validity bytemap elements.
+   **/
+  Query& set_buffer_nullable(
+      const std::string& attr,
+      void* data,
+      uint64_t data_nelements,
+      size_t data_element_size,
+      uint8_t* validity_bytemap,
+      uint64_t validity_bytemap_nelements) {
+    auto ctx = ctx_.get();
+    size_t data_size = data_nelements * data_element_size;
+    size_t validity_size = validity_bytemap_nelements * sizeof(uint8_t);
+    buff_sizes_[attr] =
+        std::tuple<uint64_t, uint64_t, uint64_t>(0, data_size, validity_size);
+    element_sizes_[attr] = data_element_size;
+    ctx.handle_error(tiledb_query_set_buffer_nullable(
+        ctx.ptr().get(),
+        query_.get(),
+        attr.c_str(),
+        data,
+        &std::get<1>(buff_sizes_[attr]),
+        validity_bytemap,
+        &std::get<2>(buff_sizes_[attr])));
+    return *this;
+  }
+
+  /**
+   * Sets a buffer for a nullable, variable-sized attribute.
+   *
+   * @tparam T Attribute value type
+   * @param attr Attribute name
+   * @param offsets Offsets array pointer where a new element begins in the data
+   *        buffer.
+   * @param offsets_nelements Number of elements in offsets buffer.
+   * @param data Buffer array pointer with elements of the attribute type.
+   *        For variable sized attributes, the buffer should be flattened.
+   * @param data_nelements Number of array elements in data buffer.
+   * @param data_element_size Size of data array elements (in bytes).
+   * @param validity_bytemap Buffer array pointer with validity bytemap values.
+   * @param validity_bytemap_nelements Number of validity bytemap elements.
+   **/
+  Query& set_buffer_nullable(
+      const std::string& attr,
+      uint64_t* offsets,
+      uint64_t offset_nelements,
+      void* data,
+      uint64_t data_nelements,
+      size_t data_element_size,
+      uint8_t* validity_bytemap,
+      uint64_t validity_bytemap_nelements) {
+    auto ctx = ctx_.get();
+    auto data_size = data_nelements * data_element_size;
+    auto offset_size = offset_nelements * sizeof(uint64_t);
+    size_t validity_size = validity_bytemap_nelements * sizeof(uint8_t);
+    element_sizes_[attr] = data_element_size;
+    buff_sizes_[attr] = std::tuple<uint64_t, uint64_t, uint64_t>(
+        offset_size, data_size, validity_size);
+    ctx.handle_error(tiledb_query_set_buffer_var_nullable(
+        ctx.ptr().get(),
+        query_.get(),
+        attr.c_str(),
+        offsets,
+        &std::get<0>(buff_sizes_[attr]),
+        data,
+        &std::get<1>(buff_sizes_[attr]),
+        validity_bytemap,
+        &std::get<2>(buff_sizes_[attr])));
     return *this;
   }
 };

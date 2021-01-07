@@ -1,5 +1,5 @@
 /**
- * @file  tiledb_cpp_api_array_schema.h
+ * @file  array_schema.h
  *
  * @author Ravi Gaddipati
  *
@@ -592,6 +592,8 @@ class ArraySchema : public Schema {
         return "COL-MAJOR";
       case TILEDB_UNORDERED:
         return "UNORDERED";
+      case TILEDB_HILBERT:
+        return "HILBERT";
     }
     return "";
   }

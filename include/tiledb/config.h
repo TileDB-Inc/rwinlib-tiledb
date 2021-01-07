@@ -1,5 +1,5 @@
 /**
- * @file   tiledb_cpp_api_config.h
+ * @file   config.h
  *
  * @author Ravi Gaddipati
  *
@@ -208,6 +208,24 @@ class Config {
     impl::check_config_error(err);
   }
 
+  /** Compares configs for equality. */
+  bool operator==(const Config& rhs) const {
+    uint8_t equal;
+    int rc = tiledb_config_compare(config_.get(), rhs.config_.get(), &equal);
+    if (rc != TILEDB_OK)
+      throw std::runtime_error(
+          "[TileDB::C++API] Error: Failed to compare configurations");
+    if (equal == 1)
+      return true;
+    else
+      return false;
+  }
+
+  /** Compares configs for inequality. */
+  bool operator!=(const Config& rhs) const {
+    return !(*this == rhs);
+  }
+
   /** Returns the pointer to the TileDB C config object. */
   std::shared_ptr<tiledb_config_t> ptr() const {
     return config_;
@@ -217,21 +235,20 @@ class Config {
    *
    * **Parameters**
    *
-   * - `sm.dedup_coords` <br>
+   *  * - `sm.dedup_coords` <br>
    *    If `true`, cells with duplicate coordinates will be removed during
-   *    sparse array writes. Note that ties during deduplication are
-   *    arbitrary. <br>
+   * sparse fragment writes. Note that ties during deduplication are broken
+   *    arbitrarily. <br>
    *    **Default**: false
    * - `sm.check_coord_dups` <br>
    *    This is applicable only if `sm.dedup_coords` is `false`.
    *    If `true`, an error will be thrown if there are cells with duplicate
-   *    coordinates during sparse array writes. If `false` and there are
-   *    duplicates, the duplicates will be written without errors, but the
-   *    TileDB behavior could be unpredictable. <br>
+   *    coordinates during sparse fragment writes. If `false` and there are
+   *    duplicates, the duplicates will be written without errors. <br>
    *    **Default**: true
    * - `sm.check_coord_oob` <br>
    *    If `true`, an error will be thrown if there are cells with coordinates
-   *    falling outside the array domain during sparse array writes. <br>
+   *    falling outside the array domain during sparse fragment writes. <br>
    *    **Default**: true
    * - `sm.check_global_order` <br>
    *    Checks if the coordinates obey the global array order. Applicable only
@@ -242,26 +259,18 @@ class Config {
    *    **Default**: 10,000,000
    * - `sm.array_schema_cache_size` <br>
    *    Array schema cache size in bytes. Any `uint64_t` value is acceptable.
-   * <br>
-   *    **Default**: 10,000,000
-   * - `sm.fragment_metadata_cache_size` <br>
-   *    The fragment metadata cache size in bytes. Any `uint64_t` value is
-   *    acceptable. <br>
+   *    <br>
    *    **Default**: 10,000,000
    * - `sm.enable_signal_handlers` <br>
    *    Whether or not TileDB will install signal handlers. <br>
    *    **Default**: true
-   * - `sm.num_async_threads` <br>
-   *    The number of threads allocated for async queries. <br>
-   *    **Default**: 1
-   * - `sm.num_reader_threads` <br>
-   *    The number of threads allocated for issuing reads to VFS in
-   *    parallel. <br>
-   *    **Default**: 1
-   * - `sm.num_writer_threads` <br>
-   *    The number of threads allocated for issuing writes to VFS in
-   *    parallel.<br>
-   *    **Default**: 1
+   * - `sm.compute_concurrency_level` <br>
+   *    Upper-bound on number of threads to allocate for compute-bound tasks.
+   * <br>
+   *    **Default*: # cores
+   * - `sm.io_concurrency_level` <br>
+   *    Upper-bound on number of threads to allocate for IO-bound tasks. <br>
+   *    **Default*: # cores
    * - `sm.num_tbb_threads` <br>
    *    The number of threads allocated for the TBB thread pool. Note: this
    *    is a whole-program setting. Usually this should not be modified from
@@ -269,6 +278,16 @@ class Config {
    *    class. When TBB is disabled, this will be used to set the level of
    *    concurrency for generic threading where TBB is otherwise used. <br>
    *    **Default**: TBB automatic
+   * - `sm.vacuum.mode` <br>
+   *    The vacuuming mode, one of `fragments` (remove consolidated fragments),
+   *    `fragment_meta` (remove only consolidated fragment metadata), or
+   *    `array_meta` (remove consolidated array metadata files). <br>
+   *    **Default**: fragments
+   * - `sm.consolidation_mode` <br>
+   *    The consolidation mode, one of `fragments` (consolidate all fragments),
+   *    `fragment_meta` (consolidate only fragment metadata footers to a single
+   *    file), or `array_meta` (consolidate array metadata only). <br>
+   *    **Default**: "fragments"
    * - `sm.consolidation.amplification` <br>
    *    The factor by which the size of the dense fragment resulting
    *    from consolidating a set of fragments (containing at least one
@@ -304,10 +323,30 @@ class Config {
    *    The memory budget for tiles of var-sized attributes
    *    to be fetched during reads.<br>
    *    **Default**: 10GB
-   * - `vfs.num_threads` <br>
-   *    The number of threads allocated for VFS operations (any backend), per
-   *    VFS instance. <br>
-   *    **Default**: number of cores
+   * - `sm.var_offsets.bitsize` <br>
+   *    The size of offsets in bits to be used for offset buffers of var-sized
+   *    attributes<br>
+   *    **Default**: 64
+   * - `sm.var_offsets.extra_element` <br>
+   *    Add an extra element to the end of the offsets buffer of var-sized
+   *    attributes which will point to the end of the values buffer.<br>
+   *    **Default**: false
+   * - `sm.var_offsets.mode` <br>
+   *    The offsets format (`bytes` or `elements`) to be used for
+   *    var-sized attributes.<br>
+   *    **Default**: bytes
+   * - `sm.sub_partitioner_memory_budget` <br>
+   *    The memory budget used by the read algorithm to force partition the
+   *    query range in case sorting is much slower than the partitioning
+   *    overhead. <br>
+   *    **Default**: 0
+   * - `vfs.read_ahead_size` <br>
+   *    The maximum byte size to read-ahead from the backend. <br>
+   *    **Default**: 102400
+   * -  `vfs.read_ahead_cache_size` <br>
+   *    The the total maximum size of the read-ahead cache, which is an LRU.
+   * <br>
+   *    **Default**: 10485760
    * - `vfs.min_parallel_size` <br>
    *    The minimum number of bytes in a parallel VFS operation
    *    (except parallel S3 writes, which are controlled by
@@ -328,7 +367,7 @@ class Config {
    * - `vfs.file.max_parallel_ops` <br>
    *    The maximum number of parallel operations on objects with `file:///`
    *    URIs. <br>
-   *    **Default**: `vfs.num_threads`
+   *    **Default**: `sm.io_concurrency_level`
    * - `vfs.file.enable_filelocks` <br>
    *    If set to `false`, file locking operations are no-ops for `file:///`
    *    URIs in VFS. <br>
@@ -341,18 +380,18 @@ class Config {
    *    **Default**: ""
    * - `vfs.azure.blob_endpoint` <br>
    *    Overrides the default Azure Storage Blob endpoint. If empty, the
-   * endpoint will be constructed from the storage account name. This should not
-   * include an http:// or https:// prefix. <br>
+   *    endpoint will be constructed from the storage account name. This
+   *    should not include an http:// or https:// prefix. <br>
    *    **Default**: ""
    * - `vfs.azure.block_list_block_size` <br>
    *    The block size (in bytes) used in Azure blob block list writes.
    *    Any `uint64_t` value is acceptable. Note:
    *    `vfs.azure.block_list_block_size * vfs.azure.max_parallel_ops` bytes
-   * will be buffered before issuing block uploads in parallel. <br>
+   *    will be buffered before issuing block uploads in parallel. <br>
    *    **Default**: "5242880"
    * - `vfs.azure.max_parallel_ops` <br>
    *    The maximum number of Azure backend parallel operations. <br>
-   *    **Default**: `vfs.num_threads`
+   *    **Default**: `sm.io_concurrency_level`
    * - `vfs.azure.use_block_list_upload` <br>
    *    Determines if the Azure backend can use chunked block uploads. <br>
    *    **Default**: "true"
@@ -361,6 +400,7 @@ class Config {
    *    **Default**: "true"
    * - `vfs.gcs.project_id` <br>
    *    Set the GCS project id. <br>
+   *    **Default**: ""
    * - `vfs.gcs.multi_part_size` <br>
    *    The part size (in bytes) used in GCS multi part writes.
    *    Any `uint64_t` value is acceptable. Note:
@@ -369,7 +409,7 @@ class Config {
    *    **Default**: "5242880"
    * - `vfs.gcs.max_parallel_ops` <br>
    *    The maximum number of GCS backend parallel operations. <br>
-   *    **Default**: `vfs.num_threads`
+   *    **Default**: `sm.io_concurrency_level`
    * - `vfs.gcs.use_multi_part_upload` <br>
    *    Determines if the GCS backend can use chunked part uploads. <br>
    *    **Default**: "true"
@@ -385,6 +425,23 @@ class Config {
    * - `vfs.s3.aws_session_token` <br>
    *    Set the AWS_SESSION_TOKEN <br>
    *    **Default**: ""
+   * - `vfs.s3.aws_role_arn` <br>
+   *    Determines the role that we want to assume.
+   *    Set the AWS_ROLE_ARN <br>
+   *    **Default**: ""
+   * - `vfs.s3.aws_external_id` <br>
+   *    Third party access ID to your resources when assuming a role.
+   *    Set the AWS_EXTERNAL_ID <br>
+   *    **Default**: ""
+   * - `vfs.s3.aws_load_frequency` <br>
+   *    Session time limit when assuming a role.
+   *    Set the AWS_LOAD_FREQUENCY <br>
+   *    **Default**: ""
+   * - `vfs.s3.aws_session_name` <br>
+   *    (Optional) session name when assuming a role.
+   *    Can be used for tracing and bookkeeping.
+   *    Set the AWS_SESSION_NAME <br>
+   *    **Default**: ""
    * - `vfs.s3.scheme` <br>
    *    The S3 scheme (`http` or `https`), if S3 is enabled. <br>
    *    **Default**: https
@@ -395,13 +452,13 @@ class Config {
    *    The S3 use of virtual addressing (`true` or `false`), if S3 is
    *    enabled. <br>
    *    **Default**: true
-   * - `vfs.s3.use_virtual_addressing` <br>
-   *    The S3 use of virtual addressing (`true` or `false`), if S3 is
+   * - `vfs.s3.use_multipart_upload` <br>
+   *    The S3 use of multi-part upload requests (`true` or `false`), if S3 is
    *    enabled. <br>
    *    **Default**: true
    * - `vfs.s3.max_parallel_ops` <br>
    *    The maximum number of S3 backend parallel operations. <br>
-   *    **Default**: `vfs.num_threads`
+   *    **Default**: `sm.io_concurrency_level`
    * - `vfs.s3.multipart_part_size` <br>
    *    The part size (in bytes) used in S3 multipart writes.
    *    Any `uint64_t` value is acceptable. Note: `vfs.s3.multipart_part_size *
@@ -436,6 +493,9 @@ class Config {
    * - `vfs.s3.request_timeout_ms` <br>
    *    The request timeout in ms. Any `long` value is acceptable. <br>
    *    **Default**: 3000
+   * - `vfs.s3.requester_pays` <br>
+   *    The requester pays for the S3 access charges. <br>
+   *    **Default**: false
    * - `vfs.s3.proxy_host` <br>
    *    The proxy host. <br>
    *    **Default**: ""
@@ -456,7 +516,7 @@ class Config {
    * - `vfs.s3.verify_ssl` <br>
    *    Enable HTTPS certificate verification. <br>
    *    **Default**: true""
-   * - `vfs.hdfs.name_node"` <br>
+   * - `vfs.hdfs.name_node_uri"` <br>
    *    Name node for HDFS. <br>
    *    **Default**: ""
    * - `vfs.hdfs.username` <br>
@@ -465,6 +525,37 @@ class Config {
    * - `vfs.hdfs.kerb_ticket_cache_path` <br>
    *    HDFS kerb ticket cache path. <br>
    *    **Default**: ""
+   * - `config.env_var_prefix` <br>
+   *    Prefix of environmental variables for reading configuration
+   *    parameters. <br>
+   *    **Default**: "TILEDB_"
+   *
+   * <br>
+   *
+   * - `rest.server_address` <br>
+   *    URL for REST server to use for remote arrays. <br>
+   *    **Default**: "https://api.tiledb.com"
+   * - `rest.server_serialization_format` <br>
+   *    Serialization format to use for remote array requests (CAPNP or
+   *    JSON). <br>
+   *    **Default**: "CAPNP"
+   * - `rest.username` <br>
+   *    Username for login to REST server. <br>
+   *    **Default**: ""
+   * - `rest.password` <br>
+   *    Password for login to REST server. <br>
+   *    **Default**: ""
+   * - `rest.token` <br>
+   *    Authentication token for REST server (used instead of
+   *    username/password). <br>
+   *    **Default**: ""
+   * - `rest.resubmit_incomplete` <br>
+   *    If true, incomplete queries received from server are automatically
+   *    resubmitted before returning to user control. <br>
+   *    **Default**: "true"
+   * - `rest.ignore_ssl_validation` <br>
+   *    Have curl ignore ssl peer and host validation for REST server. <br>
+   *    **Default**: false
    */
   Config& set(const std::string& param, const std::string& value) {
     tiledb_error_t* err;

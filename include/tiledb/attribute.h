@@ -1,5 +1,5 @@
 /**
- * @file   tiledb_cpp_api_attribute.h
+ * @file   attribute.h
  *
  * @author Ravi Gaddipati
  *
@@ -303,6 +303,95 @@ class Attribute {
         ctx.ptr().get(), attr_.get(), value, size));
   }
 
+  /**
+   * Sets the default fill value for the input, nullable attribute. This value
+   * will be used for the input attribute whenever querying (1) an empty cell in
+   * a dense array, or (2) a non-empty cell (in either dense or sparse array)
+   * when values on the input attribute are missing (e.g., if the user writes
+   * a subset of the attributes in a write operation).
+   *
+   * Applicable to var-sized attributes.
+   *
+   * **Example:**
+   *
+   * @code{.c}
+   * tiledb::Context ctx;
+   *
+   * // Fixed-sized attribute
+   * auto a1 = tiledb::Attribute::create<int>(ctx, "a1");
+   * a1.set_nullable(true);
+   * int32_t value = 0;
+   * uint64_t size = sizeof(value);
+   * uint8_t valid = 0;
+   * a1.set_fill_value(&value, size, valid);
+   *
+   * // Var-sized attribute
+   * auto a2 = tiledb::Attribute::create<std::string>(ctx, "a2");
+   * a2.set_nullable(true);
+   * std::string value("null");
+   * uint8_t valid = 0;
+   * a2.set_fill_value(value.c_str(), value.size(), valid);
+   * @endcode
+   *
+   * @param value The fill value to set.
+   * @param size The fill value size in bytes.
+   * @param valid The validity fill value, zero for a null value and
+   *     non-zero for a valid attribute.
+   *
+   * @note A call to `cell_val_num` sets the fill value
+   *     of the attribute to its default. Therefore, make sure you invoke
+   *     `set_fill_value` after deciding on the number
+   *     of values this attribute will hold in each cell.
+   *
+   * @note For fixed-sized attributes, the input `size` should be equal
+   *     to the cell size.
+   */
+  Attribute& set_fill_value(const void* value, uint64_t size, uint8_t valid) {
+    auto& ctx = ctx_.get();
+    ctx.handle_error(tiledb_attribute_set_fill_value_nullable(
+        ctx.ptr().get(), attr_.get(), value, size, valid));
+    return *this;
+  }
+
+  /**
+   * Gets the default fill value for the input attribute. This value will
+   * be used for the input attribute whenever querying (1) an empty cell in
+   * a dense array, or (2) a non-empty cell (in either dense or sparse array)
+   * when values on the input attribute are missing (e.g., if the user writes
+   * a subset of the attributes in a write operation).
+   *
+   * Applicable to both fixed-sized and var-sized attributes.
+   *
+   * **Example:**
+   *
+   * @code{.c}
+   * // Fixed-sized attribute
+   * auto a1 = tiledb::Attribute::create<int>(ctx, "a1");
+   * a1.set_nullable(true);
+   * const int32_t* value;
+   * uint64_t size;
+   * uint8_t valid;
+   * a1.get_fill_value(&value, &size, &valid);
+   *
+   * // Var-sized attribute
+   * auto a2 = tiledb::Attribute::create<std::string>(ctx, "a2");
+   * a2.set_nullable(true);
+   * const char* value;
+   * uint64_t size;
+   * uint8_t valid;
+   * a2.get_fill_value(&value, &size, &valid);
+   * @endcode
+   *
+   * @param value A pointer to the fill value to get.
+   * @param size The size of the fill value to get.
+   * @param valid The fill value validity to get.
+   */
+  void get_fill_value(const void** value, uint64_t* size, uint8_t* valid) {
+    auto& ctx = ctx_.get();
+    ctx.handle_error(tiledb_attribute_get_fill_value_nullable(
+        ctx.ptr().get(), attr_.get(), value, size, valid));
+  }
+
   /** Check if attribute is variable sized. **/
   bool variable_sized() const {
     return cell_val_num() == TILEDB_VAR_NUM;
@@ -335,6 +424,44 @@ class Attribute {
     ctx.handle_error(tiledb_attribute_set_filter_list(
         ctx.ptr().get(), attr_.get(), filter_list.ptr().get()));
     return *this;
+  }
+
+  /**
+   * Sets the nullability of an attribute.
+   *
+   * **Example:**
+   * @code{.cpp}
+   * auto a1 = Attribute::create<int>(...);
+   * a1.set_nullable(true);
+   * @endcode
+   *
+   * @param nullable Whether the attribute is nullable.
+   * @return Reference to this Attribute
+   */
+  Attribute& set_nullable(bool nullable) {
+    auto& ctx = ctx_.get();
+    ctx.handle_error(tiledb_attribute_set_nullable(
+        ctx.ptr().get(), attr_.get(), static_cast<uint8_t>(nullable)));
+    return *this;
+  }
+
+  /**
+   * Gets the nullability of an attribute.
+   *
+   * **Example:**
+   * @code{.cpp}
+   * auto a1 = Attribute::create<int>(...);
+   * auto nullable = a1.nullable();
+   * @endcode
+   *
+   * @return Whether the attribute is nullable.
+   */
+  bool nullable() {
+    auto& ctx = ctx_.get();
+    uint8_t nullable;
+    ctx.handle_error(
+        tiledb_attribute_get_nullable(ctx.ptr().get(), attr_.get(), &nullable));
+    return static_cast<bool>(nullable);
   }
 
   /** Returns the C TileDB attribute object pointer. */
