@@ -1215,6 +1215,10 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config);
  * - `rest.ignore_ssl_validation` <br>
  *    Have curl ignore ssl peer and host validation for REST server. <br>
  *    **Default**: false
+ * - `rest.creation_access_credentials_name` <br>
+ *    The name of the registered access key to use for creation of the REST
+ *    server. <br>
+ *    **Default**: no default set
  *
  * **Example:**
  *
@@ -1539,7 +1543,10 @@ tiledb_ctx_alloc(tiledb_config_t* config, tiledb_ctx_t** ctx);
 TILEDB_EXPORT void tiledb_ctx_free(tiledb_ctx_t** ctx);
 
 /**
- * Retrieves the config from a TileDB context.
+ * Retrieves a copy of the config from a TileDB context.
+ * Modifying this config will not affect the initialized
+ * context configuration.
+ *
  *
  * **Example:**
  *
@@ -2244,7 +2251,7 @@ TILEDB_EXPORT int32_t tiledb_attribute_get_fill_value(
  * const char* value = "foo";
  * uint64_t size = strlen(value);
  * uint8_t valid = 1;
- * tiledb_attribute_set_fill_value(ctx, attr, value, size, valid);
+ * tiledb_attribute_set_fill_value_nullable(ctx, attr, value, size, valid);
  * @endcode
  *
  * @param ctx The TileDB context.
@@ -2286,13 +2293,13 @@ TILEDB_EXPORT int32_t tiledb_attribute_set_fill_value_nullable(
  * const int32_t* value;
  * uint64_t size;
  * uint8_t valid;
- * tiledb_attribute_get_fill_value(ctx, attr, &value, &size, &valid);
+ * tiledb_attribute_get_fill_value_nullable(ctx, attr, &value, &size, &valid);
  *
  * // Assuming a var char attribute
  * const char* value;
  * uint64_t size;
  * uint8_t valid;
- * tiledb_attribute_get_fill_value(ctx, attr, &value, &size, &valid);
+ * tiledb_attribute_get_fill_value_nullable(ctx, attr, &value, &size, &valid);
  * @endcode
  *
  * @param ctx The TileDB context.
@@ -3309,6 +3316,27 @@ TILEDB_EXPORT int32_t tiledb_query_alloc(
     tiledb_query_t** query);
 
 /**
+ * Set the query config
+ *
+ * Setting the configuration with this function overrides the following
+ * Query-level parameters only:
+ *
+ * - `sm.memory_budget`
+ * - `sm.memory_budget_var`
+ * - `sm.sub_partitioner_memory_budget`
+ * - `sm.var_offsets.mode`
+ * - `sm.var_offsets.extra_element`
+ * - `sm.var_offsets.bitsize`
+ * - `sm.check_coord_dups`
+ * - `sm.check_coord_oob`
+ * - `sm.check_global_order`
+ * - `sm.dedup_coords`
+ */
+
+TILEDB_EXPORT int32_t tiledb_query_set_config(
+    tiledb_ctx_t* ctx, tiledb_query_t* query, tiledb_config_t* config);
+
+/**
  * Indicates that the query will write or read a subarray, and provides
  * the appropriate information.
  *
@@ -3973,7 +4001,7 @@ TILEDB_EXPORT int32_t tiledb_query_add_range(
  * @note The stride is currently unsupported. Use `nullptr` as the
  *     stride argument.
  */
-int32_t tiledb_query_add_range_by_name(
+TILEDB_EXPORT int32_t tiledb_query_add_range_by_name(
     tiledb_ctx_t* ctx,
     tiledb_query_t* query,
     const char* dim_name,
