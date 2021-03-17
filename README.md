@@ -18,6 +18,7 @@ download via `curl` or `wget`.
 
 ## From the rtools4 (and *not* msys2 which is the next compiler set,
 ## aka what may be used for 'r-devel') build: download the two artifacts
+## to the ~/Downloads/ directory (i.e. the default location on Ubuntu)
 ## eg for 2.2.2 the URL is https://github.com/TileDB-Inc/TileDB/runs/1766128541
 for f in mingw-w64-i686-tiledb.zip mingw-w64-x86_64-tiledb.zip; do
     mv -v ~/Downloads/${f} .
