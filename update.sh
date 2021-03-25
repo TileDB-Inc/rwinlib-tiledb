@@ -11,6 +11,11 @@ for f in mingw-w64-i686-tiledb.zip mingw-w64-x86_64-tiledb.zip; do
 done
 
 tar xaf mingw-w64-i686-tiledb-2.9000-1-any.pkg.tar.xz
+ver=$(strings lib/x64/libtiledbstatic.a | awk '/^GCC: \(Built by Jeroen/ {print $8; exit}')
+if [ ${ver} != "8.3.0" ]; then
+    echo "Wrong format. Exiting."
+    exit -1
+fi
 rsync -cav mingw32/include/tiledb/ include/tiledb/
 rsync -cav mingw32/lib/libtiledbstatic.a lib/i386/libtiledbstatic.a
 rm -rf mingw32
