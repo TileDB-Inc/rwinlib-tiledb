@@ -7,7 +7,7 @@
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2017-2020 TileDB, Inc.
+ * @copyright Copyright (c) 2017-2021 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -231,6 +231,15 @@ class Dimension {
       case TILEDB_DATETIME_PS:
       case TILEDB_DATETIME_FS:
       case TILEDB_DATETIME_AS:
+      case TILEDB_TIME_HR:
+      case TILEDB_TIME_MIN:
+      case TILEDB_TIME_SEC:
+      case TILEDB_TIME_MS:
+      case TILEDB_TIME_US:
+      case TILEDB_TIME_NS:
+      case TILEDB_TIME_PS:
+      case TILEDB_TIME_FS:
+      case TILEDB_TIME_AS:
         di64 = static_cast<const int64_t*>(domain);
         ss << di64[0] << "," << di64[1];
         break;
@@ -258,6 +267,10 @@ class Dimension {
   template <typename T>
   T tile_extent() const {
     impl::type_check<T>(type(), 1);
+    auto te = _tile_extent();
+    if (te == NULL) {
+      return T();
+    }
     return *(const T*)_tile_extent();
   }
 
@@ -278,6 +291,10 @@ class Dimension {
     const uint64_t* tui64;
     const float* tf32;
     const double* tf64;
+
+    if (tile_extent == NULL && type != TILEDB_STRING_ASCII) {
+      return "N/A";
+    }
 
     std::stringstream ss;
 
@@ -335,6 +352,15 @@ class Dimension {
       case TILEDB_DATETIME_PS:
       case TILEDB_DATETIME_FS:
       case TILEDB_DATETIME_AS:
+      case TILEDB_TIME_HR:
+      case TILEDB_TIME_MIN:
+      case TILEDB_TIME_SEC:
+      case TILEDB_TIME_MS:
+      case TILEDB_TIME_US:
+      case TILEDB_TIME_NS:
+      case TILEDB_TIME_PS:
+      case TILEDB_TIME_FS:
+      case TILEDB_TIME_AS:
         ti64 = static_cast<const int64_t*>(tile_extent);
         ss << *ti64;
         break;
