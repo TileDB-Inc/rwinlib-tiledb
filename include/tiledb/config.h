@@ -7,7 +7,7 @@
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2017-2021 TileDB, Inc.
+ * @copyright Copyright (c) 2017-2020 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,10 +38,8 @@
 #include "tiledb.h"
 #include "utils.h"
 
-#include <map>
 #include <memory>
 #include <string>
-#include <unordered_map>
 
 namespace tiledb {
 
@@ -199,31 +197,6 @@ class Config {
     }
   }
 
-  /**
-   * Constructor that takes as input a STL map that stores the config parameters
-   *
-   * @param config
-   */
-  explicit Config(const std::map<std::string, std::string>& config) {
-    create_config();
-    for (const auto& kv : config) {
-      set(kv.first, kv.second);
-    }
-  }
-
-  /**
-   * Constructor that takes as input a STL unordered_map that stores the config
-   * parameters
-   *
-   * @param config
-   */
-  explicit Config(const std::unordered_map<std::string, std::string>& config) {
-    create_config();
-    for (const auto& kv : config) {
-      set(kv.first, kv.second);
-    }
-  }
-
   /* ********************************* */
   /*                API                */
   /* ********************************* */
@@ -262,18 +235,9 @@ class Config {
    *
    * **Parameters**
    *
-   * - `sm.array.timestamp_start` <br>
-   *    When set, an array will be opened between this value and
-   *    `sm.array.timestamp_end` (inclusive) upon a read query. <br>
-   *    **Default**: UINT64_MAX
-   * - `sm.array.timestamp_end` <br>
-   *    When set, an array will be opened between
-   *    `sm.array.timestamp_start` and this value (inclusive) upon a read
-   *    query. <br>
-   *    **Default**: UINT64_MAX
-   * - `sm.dedup_coords` <br>
+   *  * - `sm.dedup_coords` <br>
    *    If `true`, cells with duplicate coordinates will be removed during
-   *    sparse fragment writes. Note that ties during deduplication are broken
+   * sparse fragment writes. Note that ties during deduplication are broken
    *    arbitrarily. <br>
    *    **Default**: false
    * - `sm.check_coord_dups` <br>
@@ -289,8 +253,8 @@ class Config {
    *    `sm.read_range_oob` <br>
    *    If `error`, this will check ranges for read with out-of-bounds on the
    *    dimension domain's and error. If `warn`, the ranges will be capped at
-   *    the dimension's domain and a warning logged. <br>
-   *    **Default**: warn
+   * the dimension's domain and a warning logged. <br>
+   *    **Default**: true
    * - `sm.check_global_order` <br>
    *    Checks if the coordinates obey the global array order. Applicable only
    *    to sparse writes in global order.
@@ -312,21 +276,18 @@ class Config {
    * - `sm.io_concurrency_level` <br>
    *    Upper-bound on number of threads to allocate for IO-bound tasks. <br>
    *    **Default*: # cores
+   * - `sm.num_tbb_threads` <br>
+   *    The number of threads allocated for the TBB thread pool. Note: this
+   *    is a whole-program setting. Usually this should not be modified from
+   *    the default. See also the documentation for TBB's `task_scheduler_init`
+   *    class. When TBB is disabled, this will be used to set the level of
+   *    concurrency for generic threading where TBB is otherwise used. <br>
+   *    **Default**: TBB automatic
    * - `sm.vacuum.mode` <br>
    *    The vacuuming mode, one of `fragments` (remove consolidated fragments),
    *    `fragment_meta` (remove only consolidated fragment metadata), or
    *    `array_meta` (remove consolidated array metadata files). <br>
    *    **Default**: fragments
-   * - `sm.vacuum.timestamp_start` <br>
-   *    When set, an array will be vacuumed between this value and
-   *    `sm.vacuum.timestamp_end` (inclusive). <br>
-   *    Only for `fragments` and `array_meta` vacuum mode. <br>
-   *    **Default**: 0
-   * - `sm.vacuum.timestamp_end` <br>
-   *    When set, an array will be vacuumed between `sm.vacuum.timestamp_start`
-   *    and this value (inclusive). <br>
-   *    Only for `fragments` and `array_meta` vacuum mode. <br>
-   *    **Default**: UINT64_MAX
    * - `sm.consolidation_mode` <br>
    *    The consolidation mode, one of `fragments` (consolidate all fragments),
    *    `fragment_meta` (consolidate only fragment metadata footers to a single
@@ -359,16 +320,6 @@ class Config {
    *    The size ratio that two ("adjacent") fragments must satisfy to be
    *    considered for consolidation in a single step.<br>
    *    **Default**: 0.0
-   * - `sm.consolidation.timestamp_start` <br>
-   *    When set, an array will be consolidated between this value and
-   *    `sm.consolidation.timestamp_end` (inclusive). <br>
-   *    Only for `fragments` and `array_meta` consolidation mode. <br>
-   *    **Default**: 0
-   * - `sm.consolidation.timestamp_end` <br>
-   *    When set, an array will be consolidated between
-   *    `sm.consolidation.timestamp_start` and this value (inclusive). <br>
-   *    Only for `fragments` and `array_meta` consolidation mode. <br>
-   *    **Default**: UINT64_MAX
    * - `sm.memory_budget` <br>
    *    The memory budget for tiles of fixed-sized attributes (or offsets for
    *    var-sized attributes) to be fetched during reads.<br>
@@ -399,7 +350,7 @@ class Config {
    *    **Default**: 102400
    * -  `vfs.read_ahead_cache_size` <br>
    *    The the total maximum size of the read-ahead cache, which is an LRU.
-   *    <br>
+   * <br>
    *    **Default**: 10485760
    * - `vfs.min_parallel_size` <br>
    *    The minimum number of bytes in a parallel VFS operation
@@ -509,9 +460,6 @@ class Config {
    *    The S3 use of virtual addressing (`true` or `false`), if S3 is
    *    enabled. <br>
    *    **Default**: true
-   * - `vfs.s3.skip_init` <br>
-   *    Skip Aws::InitAPI for the S3 layer (`true` or `false`) <br>
-   *    **Default**: false
    * - `vfs.s3.use_multipart_upload` <br>
    *    The S3 use of multi-part upload requests (`true` or `false`), if S3 is
    *    enabled. <br>
@@ -593,11 +541,9 @@ class Config {
    *    Prefix of environmental variables for reading configuration
    *    parameters. <br>
    *    **Default**: "TILEDB_"
-   * - `config.logging_level` <br>
-   *    The logging level configured, possible values: "0": fatal, "1": error,
-   *    "2": warn, "3": info "4": debug, "5": trace <br>
-   *    **Default**: "1" if --enable-verbose bootstrap flag is provided,
-   *    "0" otherwise <br>
+   *
+   * <br>
+   *
    * - `rest.server_address` <br>
    *    URL for REST server to use for remote arrays. <br>
    *    **Default**: "https://api.tiledb.com"
@@ -627,20 +573,20 @@ class Config {
    *    server. <br>
    *    **Default**: no default set
    * -  `rest.retry_http_codes` <br>
-   *    CSV list of http status codes to automatically retry a REST request for
-   *    <br>
-   *    **Default**: "503"
-   * - `rest.retry_count` <br>
-   *    Number of times to retry failed REST requests <br>
-   *    **Default**: 3
-   * - `rest.retry_initial_delay_ms` <br>
-   *    Initial delay in milliseconds to wait until retrying a REST request
-   *    <br>
-   *    **Default**: 500
-   * - `rest.retry_delay_factor` <br>
-   *    The delay factor to exponentially wait until further retries of a
-   *    failed REST request <br>
-   *    **Default**: 1.25
+   *     CSV list of http status codes to automatically retry a REST request for
+   * <br>
+   *     **Default**: "503"
+   * -  `rest.retry_count` <br>
+   *     Number of times to retry failed REST requests <br>
+   *     **Default**: 3
+   * -  `rest.retry_initial_delay_ms` <br>
+   *     Initial delay in milliseconds to wait until retrying a REST request
+   * <br>
+   *     **Default**: 500
+   * -  `rest.retry_delay_factor` <br>
+   *     The delay factor to exponentially wait until further retries of a
+   * failed REST request <br>
+   *     **Default**: 1.25
    */
   Config& set(const std::string& param, const std::string& value) {
     tiledb_error_t* err;

@@ -7,7 +7,7 @@
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2017-2021 TileDB, Inc.
+ * @copyright Copyright (c) 2017-2020 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -271,23 +271,6 @@ inline bool tiledb_datetime_type(tiledb_datatype_t type) {
     case TILEDB_DATETIME_PS:
     case TILEDB_DATETIME_FS:
     case TILEDB_DATETIME_AS:
-      return true;
-    default:
-      return false;
-  }
-}
-
-inline bool tiledb_time_type(tiledb_datatype_t type) {
-  switch (type) {
-    case TILEDB_TIME_HR:
-    case TILEDB_TIME_MIN:
-    case TILEDB_TIME_SEC:
-    case TILEDB_TIME_MS:
-    case TILEDB_TIME_US:
-    case TILEDB_TIME_NS:
-    case TILEDB_TIME_PS:
-    case TILEDB_TIME_FS:
-    case TILEDB_TIME_AS:
       return true;
     default:
       return false;

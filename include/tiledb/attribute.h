@@ -7,7 +7,7 @@
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2017-2021 TileDB, Inc.
+ * @copyright Copyright (c) 2017-2020 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -510,13 +510,6 @@ class Attribute {
     using DataT = typename impl::TypeHandler<T>;
     Attribute a(ctx, name, DataT::tiledb_type);
     a.set_cell_val_num(DataT::tiledb_num);
-    return a;
-  }
-
-  /** Factory function taking the type as a tiledb_datatype_t variable. */
-  static Attribute create(
-      const Context& ctx, const std::string& name, tiledb_datatype_t type) {
-    Attribute a(ctx, name, type);
     return a;
   }
 

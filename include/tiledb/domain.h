@@ -7,7 +7,7 @@
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2017-2021 TileDB, Inc.
+ * @copyright Copyright (c) 2017-2020 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -315,9 +315,9 @@ class Domain {
 /*               MISC                */
 /* ********************************* */
 
-/** Get a string representation of the domain for an output stream. */
+/** Get a string representation of an attribute for an output stream. */
 inline std::ostream& operator<<(std::ostream& os, const Domain& d) {
-  os << "Domain<";
+  os << "Domain<(" << impl::to_str(d.type()) << ")";
   for (const auto& dimension : d.dimensions()) {
     os << " " << dimension;
   }
