@@ -7,7 +7,7 @@
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2017-2020 TileDB, Inc.
+ * @copyright Copyright (c) 2017-2021 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -189,6 +189,7 @@ class Array {
    * @param query_type Query type to open the array for.
    * @param timestamp The timestamp to open the array at.
    */
+  TILEDB_DEPRECATED
   Array(
       const Context& ctx,
       const std::string& array_uri,
@@ -232,6 +233,7 @@ class Array {
    * @param timestamp The timestamp to open the array at.
    */
   // clang-format on
+  TILEDB_DEPRECATED
   Array(
       const Context& ctx,
       const std::string& array_uri,
@@ -246,6 +248,7 @@ class Array {
     tiledb_array_t* array;
     ctx.handle_error(tiledb_array_alloc(c_ctx, array_uri.c_str(), &array));
     array_ = std::shared_ptr<tiledb_array_t>(array, deleter_);
+
     ctx.handle_error(tiledb_array_open_at_with_key(
         c_ctx,
         array,
@@ -267,6 +270,7 @@ class Array {
    * See @ref Array::Array(const Context&,const std::string&,tiledb_query_type_t,tiledb_encryption_type_t,const void*,uint32_t,uint64_t) "Array::Array"
    */
   // clang-format on
+  TILEDB_DEPRECATED
   Array(
       const Context& ctx,
       const std::string& array_uri,
@@ -282,6 +286,27 @@ class Array {
             encryption_key.data(),
             (uint32_t)encryption_key.size(),
             timestamp) {
+  }
+
+  /**
+   * @brief Constructor. This sets the array config.
+   *
+   * **Example:**
+   *
+   * @code{.cpp}
+   * tiledb::Context ctx;
+   * tiledb_config_t* config;
+   * @endcode
+   *
+   * @param ctx TileDB context.
+   * @param carray The array.
+   * @param config The array's config.
+   */
+  Array(const Context& ctx, tiledb_array_t* carray, tiledb_config_t* config)
+      : ctx_(ctx)
+      , schema_(ArraySchema(ctx, (tiledb_array_schema_t*)nullptr)) {
+    tiledb_ctx_t* c_ctx = ctx.ptr().get();
+    ctx.handle_error(tiledb_array_set_config(c_ctx, carray, config));
   }
 
   /**
@@ -464,6 +489,7 @@ class Array {
    * @param timestamp The timestamp to open the array at.
    * @throws TileDBError if the array is already open or other error occurred.
    */
+  TILEDB_DEPRECATED
   void open(tiledb_query_type_t query_type, uint64_t timestamp) {
     open(query_type, TILEDB_NO_ENCRYPTION, nullptr, 0, timestamp);
   }
@@ -484,7 +510,8 @@ class Array {
    * // Close and open again for reading.
    * array.close();
    * // Get some `timestamp` in milliseconds here
-   * array.open(TILEDB_READ, TILEDB_AES_256_GCM, key, sizeof(key), timestamp);
+   * array.open(TILEDB_READ, TILEDB_AES_256_GCM, key, sizeof(key),
+   * timestamp);
    * @endcode
    *
    * @param query_type The type of queries the array object will be receiving.
@@ -493,6 +520,7 @@ class Array {
    * @param key_length Length in bytes of the encryption key.
    * @param timestamp The timestamp to open the array at.
    */
+  TILEDB_DEPRECATED
   void open(
       tiledb_query_type_t query_type,
       tiledb_encryption_type_t encryption_type,
@@ -579,6 +607,7 @@ class Array {
    * @throws TileDBError if the array was not already open or other error
    * occurred.
    */
+  TILEDB_DEPRECATED
   void reopen_at(uint64_t timestamp) {
     auto& ctx = ctx_.get();
     tiledb_ctx_t* c_ctx = ctx.ptr().get();
@@ -589,13 +618,66 @@ class Array {
     schema_ = ArraySchema(ctx, array_schema);
   }
 
-  /** Returns the timestamp at which the array was opened. */
+  /**
+   * Returns the timestamp at which the array was opened.
+   *
+   * This has been deprecated, use `open_timestamp_end()` instead.
+   */
+  TILEDB_DEPRECATED
   uint64_t timestamp() const {
     auto& ctx = ctx_.get();
     uint64_t timestamp;
     ctx.handle_error(
         tiledb_array_get_timestamp(ctx.ptr().get(), array_.get(), &timestamp));
     return timestamp;
+  }
+
+  /** Sets the inclusive starting timestamp when opening this array. */
+  void set_open_timestamp_start(uint64_t timestamp_start) const {
+    auto& ctx = ctx_.get();
+    ctx.handle_error(tiledb_array_set_open_timestamp_start(
+        ctx.ptr().get(), array_.get(), timestamp_start));
+  }
+
+  /** Sets the inclusive ending timestamp when opening this array. */
+  void set_open_timestamp_end(uint64_t timestamp_end) const {
+    auto& ctx = ctx_.get();
+    ctx.handle_error(tiledb_array_set_open_timestamp_end(
+        ctx.ptr().get(), array_.get(), timestamp_end));
+  }
+
+  /** Retrieves the inclusive starting timestamp. */
+  uint64_t open_timestamp_start() const {
+    auto& ctx = ctx_.get();
+    uint64_t timestamp_start;
+    ctx.handle_error(tiledb_array_get_open_timestamp_start(
+        ctx.ptr().get(), array_.get(), &timestamp_start));
+    return timestamp_start;
+  }
+
+  /** Retrieves the inclusive ending timestamp. */
+  uint64_t open_timestamp_end() const {
+    auto& ctx = ctx_.get();
+    uint64_t timestamp_end;
+    ctx.handle_error(tiledb_array_get_open_timestamp_end(
+        ctx.ptr().get(), array_.get(), &timestamp_end));
+    return timestamp_end;
+  }
+
+  /** Sets the array config. */
+  void set_config(const Config& config) const {
+    auto& ctx = ctx_.get();
+    ctx.handle_error(tiledb_array_set_config(
+        ctx.ptr().get(), array_.get(), config.ptr().get()));
+  }
+
+  /** Retrieves the array config. */
+  Config config() const {
+    auto& ctx = ctx_.get();
+    tiledb_config_t* config = nullptr;
+    ctx.handle_error(
+        tiledb_array_get_config(ctx.ptr().get(), array_.get(), &config));
+    return Config(&config);
   }
 
   /**

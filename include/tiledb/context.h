@@ -7,7 +7,7 @@
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2017-2020 TileDB, Inc.
+ * @copyright Copyright (c) 2017-2021 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -216,6 +216,18 @@ class Context {
   /** Sets a string/string KV tag on the context. */
   void set_tag(const std::string& key, const std::string& value) {
     handle_error(tiledb_ctx_set_tag(ctx_.get(), key.c_str(), value.c_str()));
+  }
+
+  /** Returns a JSON-formatted string of the stats. */
+  std::string stats() {
+    char* c_str;
+    handle_error(tiledb_ctx_get_stats(ctx_.get(), &c_str));
+
+    // Copy `c_str` into `str`.
+    std::string str(c_str);
+    ::free(c_str);
+
+    return str;
   }
 
   /* ********************************* */

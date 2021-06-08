@@ -5,7 +5,7 @@
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2020 TileDB, Inc.
+ * @copyright Copyright (c) 2020-2021 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -209,6 +209,14 @@ ArrowInfo tiledb_buffer_arrow_fmt(BufferInfo bufferinfo, bool use_list = true) {
     case TILEDB_UINT64:
       return ArrowInfo("L");
 
+    case TILEDB_TIME_SEC:
+      return ArrowInfo("tts");
+    case TILEDB_TIME_MS:
+      return ArrowInfo("ttm");
+    case TILEDB_TIME_US:
+      return ArrowInfo("ttu");
+    case TILEDB_TIME_NS:
+      return ArrowInfo("ttn");
     case TILEDB_DATETIME_SEC:
       return ArrowInfo("tss:");
     case TILEDB_DATETIME_MS:
@@ -229,6 +237,10 @@ ArrowInfo tiledb_buffer_arrow_fmt(BufferInfo bufferinfo, bool use_list = true) {
     case TILEDB_DATETIME_PS:
     case TILEDB_DATETIME_FS:
     case TILEDB_DATETIME_AS:
+    case TILEDB_TIME_MIN:
+    case TILEDB_TIME_PS:
+    case TILEDB_TIME_FS:
+    case TILEDB_TIME_AS:
     case TILEDB_STRING_UTF16:
     case TILEDB_STRING_UTF32:
     case TILEDB_STRING_UCS2:
