@@ -34,7 +34,7 @@ rm -v mingw-w64-x86_64-tiledb-2.9000-1-any.pkg.tar.xz
 
 tar xaf mingw-w64-ucrt-x86_64-tiledb-2.9000-1-any.pkg.tar.xz
 rsync -cav ucrt64/include/tiledb/ include/tiledb/
-rsync -cav ucrt64/lib/libtiledbstatic.a lib/x64/libtiledbstatic.a
+rsync -cav ucrt64/lib/libtiledbstatic.a lib/x64-ucrt/libtiledbstatic.a
 rm -rf ucrt64
 rm -v mingw-w64-ucrt-x86_64-tiledb-2.9000-1-any.pkg.tar.xz
 
