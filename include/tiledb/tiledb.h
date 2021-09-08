@@ -1036,11 +1036,64 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config);
  *    The offsets format (`bytes` or `elements`) to be used for
  *    var-sized attributes.<br>
  *    **Default**: bytes
- * - `sm.sub_partitioner_memory_budget` <br>
- *    The memory budget used by the read algorithm to force partition the
- *    query range in case sorting is much slower than the partitioning
- *    overhead. <br>
- *    **Default**: 0
+ * - `sm.use_refactored_readers` <br>
+ *    Use the refactored readers or not. <br>
+ *    **Default**: false
+ * - `sm.mem.malloc_trim` <br>
+ *    Should malloc_trim be called on context and query destruction? This might
+ * reduce residual memory usage. <br>
+ *    **Default**: true
+ * - `sm.mem.total_budget` <br>
+ *    Memory budget for readers and writers. <br>
+ *    **Default**: 10GB
+ * - `sm.mem.reader.sparse_global_order.ratio_coords` <br>
+ *    Ratio of the budget allocated for coordinates in the sparse global
+ *    order reader. <br>
+ *    **Default**: 0.5
+ * - `sm.mem.reader.sparse_global_order.ratio_query_condition` <br>
+ *    Ratio of the budget allocated for the query condition in the sparse
+ *    global order reader. <br>
+ *    **Default**: 0.25
+ * - `sm.mem.reader.sparse_global_order.ratio_tile_ranges` <br>
+ *    Ratio of the budget allocated for tile ranges in the sparse global
+ *    order reader. <br>
+ *    **Default**: 0.1
+ * - `sm.mem.reader.sparse_global_order.ratio_array_data` <br>
+ *    Ratio of the budget allocated for array data in the sparse global
+ *    order reader. <br>
+ *    **Default**: 0.1
+ * - `sm.mem.reader.sparse_global_order.ratio_result_tiles` <br>
+ *    Ratio of the budget allocated for result tiles in the sparse global
+ *    order reader. <br>
+ *    **Default**: 0.05
+ * - `sm.mem.reader.sparse_global_order.ratio_rcs` <br>
+ *    Ratio of the budget allocated for result cell slabs in the sparse
+ *    global order reader. <br>
+ *    **Default**: 0.05
+ * - `sm.mem.reader.sparse_unordered_with_dups.ratio_coords` <br>
+ *    Ratio of the budget allocated for coordinates in the sparse unordered
+ *    with duplicates reader. <br>
+ *    **Default**: 0.5
+ * - `sm.mem.reader.sparse_unordered_with_dups.ratio_query_condition` <br>
+ *    Ratio of the budget allocated for the query condition in the sparse
+ *    unordered with duplicates reader. <br>
+ *    **Default**: 0.25
+ * - `sm.mem.reader.sparse_unordered_with_dups.ratio_tile_ranges` <br>
+ *    Ratio of the budget allocated for tile ranges in the sparse unordered
+ *    with duplicates reader. <br>
+ *    **Default**: 0.1
+ * - `sm.mem.reader.sparse_unordered_with_dups.ratio_array_data` <br>
+ *    Ratio of the budget allocated for array data in the sparse unordered
+ *    with duplicates reader. <br>
+ *    **Default**: 0.1
+ * - `sm.mem.reader.sparse_unordered_with_dups.ratio_result_tiles` <br>
+ *    Ratio of the budget allocated for result tiles in the sparse
+ *    unordered with duplicates reader. <br>
+ *    **Default**: 0.05
+ * - `sm.mem.reader.sparse_unordered_with_dups.ratio_rcs` <br>
+ *    Ratio of the budget allocated for result cell slabs in the sparse
+ *    unordered with duplicates reader. <br>
+ *    **Default**: 0.05
  * - `vfs.read_ahead_size` <br>
  *    The maximum byte size to read-ahead from the backend. <br>
  *    **Default**: 102400
@@ -1077,6 +1130,9 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config);
  *    **Default**: ""
  * - `vfs.azure.storage_account_key` <br>
  *    Set the Azure Storage Account key. <br>
+ *    **Default**: ""
+ * - `vfs.azure.storage_sas_token` <br>
+ *    Set the Azure Storage SAS (shared access signature) token. <br>
  *    **Default**: ""
  * - `vfs.azure.blob_endpoint` <br>
  *    Overrides the default Azure Storage Blob endpoint. If empty, the endpoint
@@ -1226,6 +1282,26 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config);
  *    The server-side encryption algorithm to use. Supported non-empty
  *    values are "aes256" and "kms" (AWS key management service). <br>
  *    **Default**: ""
+ * - `vfs.s3.bucket_canned_acl` <br>
+ *    Names of values found in Aws::S3::Model::BucketCannedACL enumeration.
+ *    "NOT_SET"
+ *    "private_"
+ *    "public_read"
+ *    "public_read_write"
+ *    "authenticated_read"
+ *    **Default**: "NOT_SET"
+ * - `vfs.s3.object_canned_acl` <br>
+ *    Names of values found in Aws::S3::Model::ObjectCannedACL enumeration.
+ *    (The first 5 are the same as for "vfs.s3.bucket_canned_acl".)
+ *    "NOT_SET"
+ *    "private_"
+ *    "public_read"
+ *    "public_read_write"
+ *    "authenticated_read"
+ *    (The following three items are found only in
+ *     Aws::S3::Model::ObjectCannedACL.) "aws_exec_read" "owner_read"
+ *    "bucket_owner_full_control"
+ *    **Default**: "NOT_SET"
  * - `vfs.hdfs.name_node_uri"` <br>
  *    Name node for HDFS. <br>
  *    **Default**: ""
@@ -3099,7 +3175,7 @@ TILEDB_EXPORT int32_t tiledb_array_schema_load(
  * @param array_schema The array schema to be retrieved, or `NULL` upon error.
  * @return `TILEDB_OK` for success and `TILEDB_OOM` or `TILEDB_ERR` for error.
  */
-TILEDB_EXPORT int32_t tiledb_array_schema_load_with_key(
+TILEDB_DEPRECATED_EXPORT int32_t tiledb_array_schema_load_with_key(
     tiledb_ctx_t* ctx,
     const char* array_uri,
     tiledb_encryption_type_t encryption_type,
@@ -3429,7 +3505,6 @@ TILEDB_EXPORT int32_t tiledb_query_get_stats(
  *
  * - `sm.memory_budget`
  * - `sm.memory_budget_var`
- * - `sm.sub_partitioner_memory_budget`
  * - `sm.var_offsets.mode`
  * - `sm.var_offsets.extra_element`
  * - `sm.var_offsets.bitsize`
@@ -3525,7 +3600,7 @@ TILEDB_EXPORT int32_t tiledb_query_set_subarray(
  *     it will contain the size of the useful (read) data in `buffer`.
  * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
  */
-TILEDB_EXPORT int32_t tiledb_query_set_buffer(
+TILEDB_DEPRECATED_EXPORT int32_t tiledb_query_set_buffer(
     tiledb_ctx_t* ctx,
     tiledb_query_t* query,
     const char* name,
@@ -3568,7 +3643,7 @@ TILEDB_EXPORT int32_t tiledb_query_set_buffer(
  *     it will contain the size of the useful (read) data in `buffer_val`.
  * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
  */
-TILEDB_EXPORT int32_t tiledb_query_set_buffer_var(
+TILEDB_DEPRECATED_EXPORT int32_t tiledb_query_set_buffer_var(
     tiledb_ctx_t* ctx,
     tiledb_query_t* query,
     const char* name,
@@ -3613,7 +3688,7 @@ TILEDB_EXPORT int32_t tiledb_query_set_buffer_var(
  *     useful (read) data in `buffer_validity_bytemap`.
  * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
  */
-TILEDB_EXPORT int32_t tiledb_query_set_buffer_nullable(
+TILEDB_DEPRECATED_EXPORT int32_t tiledb_query_set_buffer_nullable(
     tiledb_ctx_t* ctx,
     tiledb_query_t* query,
     const char* name,
@@ -3668,7 +3743,7 @@ TILEDB_EXPORT int32_t tiledb_query_set_buffer_nullable(
  *     useful (read) data in `buffer_validity_bytemap`.
  * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
  */
-TILEDB_EXPORT int32_t tiledb_query_set_buffer_var_nullable(
+TILEDB_DEPRECATED_EXPORT int32_t tiledb_query_set_buffer_var_nullable(
     tiledb_ctx_t* ctx,
     tiledb_query_t* query,
     const char* name,
@@ -3678,6 +3753,101 @@ TILEDB_EXPORT int32_t tiledb_query_set_buffer_var_nullable(
     uint64_t* buffer_val_size,
     uint8_t* buffer_validity_bytemap,
     uint64_t* buffer_validity_bytemap_size);
+
+/**
+ * Sets the buffer for an attribute/dimension to a query, which will
+ * either hold the values to be written (if it is a write query), or will hold
+ * the results from a read query.
+ *
+ * **Example:**
+ *
+ * @code{.c}
+ * int32_t a1[100];
+ * uint64_t a1_size = sizeof(a1);
+ * tiledb_query_set_data_buffer(ctx, query, "a1", a1, &a1_size);
+ * @endcode
+ *
+ * @param ctx The TileDB context.
+ * @param query The TileDB query.
+ * @param name The attribute/dimension to set the buffer for. Note that
+ *     zipped coordinates have special name `TILEDB_COORDS`.
+ * @param buffer The buffer that either have the input data to be written,
+ *     or will hold the data to be read.
+ * @param buffer_size In the case of writes, this is the size of `buffer`
+ *     in bytes. In the case of reads, this initially contains the allocated
+ *     size of `buffer`, but after the termination of the query
+ *     it will contain the size of the useful (read) data in `buffer`.
+ * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
+ */
+TILEDB_EXPORT int32_t tiledb_query_set_data_buffer(
+    tiledb_ctx_t* ctx,
+    tiledb_query_t* query,
+    const char* name,
+    void* buffer,
+    uint64_t* buffer_size);
+
+/**
+ * Sets the starting offsets of each cell value in the data buffer.
+ *
+ * **Example:**
+ *
+ * @code{.c}
+ * uint64_t a1[100];
+ * uint64_t a1_size = sizeof(a1);
+ * tiledb_query_set_offsets_buffer(ctx, query, "a1", a1, &a1_size);
+ * @endcode
+ *
+ * @param ctx The TileDB context.
+ * @param query The TileDB query.
+ * @param name The attribute/dimension to set the buffer for. Note that
+ *     zipped coordinates have special name `TILEDB_COORDS`.
+ * @param buffer This buffer holds the starting offsets
+ *     of each cell value in `buffer_val`.
+ * @param buffer_size In the case of writes, it is the size of `buffer_off`
+ *     in bytes. In the case of reads, this initially contains the allocated
+ *     size of `buffer_off`, but after the *end of the query*
+ *     (`tiledb_query_submit`) it will contain the size of the useful (read)
+ *     data in `buffer_off`.
+ * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
+ */
+TILEDB_EXPORT int32_t tiledb_query_set_offsets_buffer(
+    tiledb_ctx_t* ctx,
+    tiledb_query_t* query,
+    const char* name,
+    uint64_t* buffer,
+    uint64_t* buffer_size);
+
+/**
+ * Sets the validity byte map that has exactly one value for each value in the
+ * data buffer.
+ *
+ * **Example:**
+ *
+ * @code{.c}
+ * uint8_t a1[100];
+ * uint64_t a1_size = sizeof(a1);
+ * tiledb_query_set_validity_buffer(ctx, query, "a1", a1, &a1_size);
+ * @endcode
+ *
+ * @param ctx The TileDB context.
+ * @param query The TileDB query.
+ * @param name The attribute/dimension to set the buffer for. Note that
+ *     zipped coordinates have special name `TILEDB_COORDS`.
+ * @param buffer The validity byte map that has exactly
+ *     one value for each value in `buffer`.
+ * @param buffer_size In the case of writes, this is the
+ *     size of `buffer_validity_bytemap` in bytes. In the case of reads,
+ *     this initially contains the allocated size of `buffer_validity_bytemap`,
+ *     but after the termination of the query it will contain the size of the
+ *     useful (read) data in `buffer_validity_bytemap`.
+ * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
+ */
+TILEDB_EXPORT int32_t tiledb_query_set_validity_buffer(
+    tiledb_ctx_t* ctx,
+    tiledb_query_t* query,
+    const char* name,
+    uint8_t* buffer,
+    uint64_t* buffer_size);
 
 /**
  * Gets the buffer of a fixed-sized attribute/dimension from a query. If the
@@ -3701,7 +3871,7 @@ TILEDB_EXPORT int32_t tiledb_query_set_buffer_var_nullable(
  *     `set_buffer`.
  * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
  */
-TILEDB_EXPORT int32_t tiledb_query_get_buffer(
+TILEDB_DEPRECATED_EXPORT int32_t tiledb_query_get_buffer(
     tiledb_ctx_t* ctx,
     tiledb_query_t* query,
     const char* name,
@@ -3737,7 +3907,7 @@ TILEDB_EXPORT int32_t tiledb_query_get_buffer(
  * from `set_buffer`.
  * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
  */
-TILEDB_EXPORT int32_t tiledb_query_get_buffer_var(
+TILEDB_DEPRECATED_EXPORT int32_t tiledb_query_get_buffer_var(
     tiledb_ctx_t* ctx,
     tiledb_query_t* query,
     const char* name,
@@ -3758,7 +3928,7 @@ TILEDB_EXPORT int32_t tiledb_query_get_buffer_var(
  * uint64_t* a1_size;
  * uint8_t* a1_validity;
  * uint64_t* a1_validity_size;
- * tiledb_query_get_buffer(
+ * tiledb_query_get_buffer_nullable(
  *   ctx, query, "a1", &a1, &a1_size, &a1_validity, &a1_validity_size);
  * @endcode
  *
@@ -3776,7 +3946,7 @@ TILEDB_EXPORT int32_t tiledb_query_get_buffer_var(
  * origina variable address from `set_buffer_nullable`.
  * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
  */
-TILEDB_EXPORT int32_t tiledb_query_get_buffer_nullable(
+TILEDB_DEPRECATED_EXPORT int32_t tiledb_query_get_buffer_nullable(
     tiledb_ctx_t* ctx,
     tiledb_query_t* query,
     const char* name,
@@ -3799,7 +3969,7 @@ TILEDB_EXPORT int32_t tiledb_query_get_buffer_nullable(
  * uint64_t* a2_val_size;
  * uint8_t* a2_validity;
  * uint64_t* a2_validity_size;
- * tiledb_query_get_buffer_var(
+ * tiledb_query_get_buffer_var_nullable(
  *     ctx, query, "a2", &a2_off, &a2_off_size, &a2_val, &a2_val_size,
  *     &a2_validity, &a2_validity_size);
  * @endcode
@@ -3821,7 +3991,7 @@ TILEDB_EXPORT int32_t tiledb_query_get_buffer_nullable(
  * origina variable address from `set_buffer_var_nullable`.
  * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
  */
-TILEDB_EXPORT int32_t tiledb_query_get_buffer_var_nullable(
+TILEDB_DEPRECATED_EXPORT int32_t tiledb_query_get_buffer_var_nullable(
     tiledb_ctx_t* ctx,
     tiledb_query_t* query,
     const char* name,
@@ -3831,6 +4001,92 @@ TILEDB_EXPORT int32_t tiledb_query_get_buffer_var_nullable(
     uint64_t** buffer_val_size,
     uint8_t** buffer_validity_bytemap,
     uint64_t** buffer_validity_bytemap_size);
+
+/**
+ * Gets the buffer of a fixed-sized attribute/dimension from a query. If the
+ * buffer has not been set, then `buffer` is set to `nullptr`.
+ *
+ * **Example:**
+ *
+ * @code{.c}
+ * int* a1;
+ * uint64_t* a1_size;
+ * tiledb_query_get_data_buffer(ctx, query, "a1", &a1, &a1_size);
+ * @endcode
+ *
+ * @param ctx The TileDB context.
+ * @param query The TileDB query.
+ * @param name The attribute/dimension to get the buffer for. Note that the
+ *     zipped coordinates have special name `TILEDB_COORDS`.
+ * @param buffer The buffer to retrieve.
+ * @param buffer_size A pointer to the size of the buffer. Note that this is
+ *     a double pointer and returns the original variable address from
+ *     `set_buffer`.
+ * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
+ */
+TILEDB_EXPORT int32_t tiledb_query_get_data_buffer(
+    tiledb_ctx_t* ctx,
+    tiledb_query_t* query,
+    const char* name,
+    void** buffer,
+    uint64_t** buffer_size);
+
+/**
+ * Gets the starting offsets of each cell value in the data buffer.
+ *
+ * **Example:**
+ *
+ * @code{.c}
+ * int* a1;
+ * uint64_t* a1_size;
+ * tiledb_query_get_offsets_buffer(ctx, query, "a1", &a1, &a1_size);
+ * @endcode
+ *
+ * @param ctx The TileDB context.
+ * @param query The TileDB query.
+ * @param name The attribute/dimension to get the buffer for. Note that the
+ *     zipped coordinates have special name `TILEDB_COORDS`.
+ * @param buffer The buffer to retrieve.
+ * @param buffer_size A pointer to the size of the buffer. Note that this is
+ *     a double pointer and returns the original variable address from
+ *     `set_buffer`.
+ * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
+ */
+TILEDB_EXPORT int32_t tiledb_query_get_offsets_buffer(
+    tiledb_ctx_t* ctx,
+    tiledb_query_t* query,
+    const char* name,
+    uint64_t** buffer,
+    uint64_t** buffer_size);
+
+/**
+ * Gets the validity byte map that has exactly one value for each value in the
+ * data buffer.
+ *
+ * **Example:**
+ *
+ * @code{.c}
+ * int* a1;
+ * uint64_t* a1_size;
+ * tiledb_query_get_validity_buffer(ctx, query, "a1", &a1, &a1_size);
+ * @endcode
+ *
+ * @param ctx The TileDB context.
+ * @param query The TileDB query.
+ * @param name The attribute/dimension to get the buffer for. Note that the
+ *     zipped coordinates have special name `TILEDB_COORDS`.
+ * @param buffer The buffer to retrieve.
+ * @param buffer_size A pointer to the size of the buffer. Note that this is
+ *     a double pointer and returns the original variable address from
+ *     `set_buffer`.
+ * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
+ */
+TILEDB_EXPORT int32_t tiledb_query_get_validity_buffer(
+    tiledb_ctx_t* ctx,
+    tiledb_query_t* query,
+    const char* name,
+    uint8_t** buffer,
+    uint64_t** buffer_size);
 
 /**
  * Sets the layout of the cells to be written or read.
@@ -4898,8 +5154,6 @@ TILEDB_EXPORT int32_t tiledb_array_open(
     tiledb_ctx_t* ctx, tiledb_array_t* array, tiledb_query_type_t query_type);
 
 /**
- * This is a deprecated API.
- *
  * Similar to `tiledb_array_open`, but this function takes as input a
  * timestamp, representing time in milliseconds ellapsed since
  * 1970-01-01 00:00:00 +0000 (UTC). Opening the array at a
@@ -4932,7 +5186,7 @@ TILEDB_EXPORT int32_t tiledb_array_open(
  *      `timestamp{start, end}` values should be set to a config that's set to
  *       the array object before opening the array.
  */
-TILEDB_EXPORT int32_t tiledb_array_open_at(
+TILEDB_DEPRECATED_EXPORT int32_t tiledb_array_open_at(
     tiledb_ctx_t* ctx,
     tiledb_array_t* array,
     tiledb_query_type_t query_type,
@@ -4966,7 +5220,7 @@ TILEDB_EXPORT int32_t tiledb_array_open_at(
  *
  * @note The config should be set before opening an array.
  */
-TILEDB_EXPORT int32_t tiledb_array_open_with_key(
+TILEDB_DEPRECATED_EXPORT int32_t tiledb_array_open_with_key(
     tiledb_ctx_t* ctx,
     tiledb_array_t* array,
     tiledb_query_type_t query_type,
@@ -4975,8 +5229,6 @@ TILEDB_EXPORT int32_t tiledb_array_open_with_key(
     uint32_t key_length);
 
 /**
- * This is a deprecated API.
- *
  * Similar to `tiledb_array_open_with_key`, but this function takes as
  * input a timestamp, representing time in milliseconds ellapsed since
  * 1970-01-01 00:00:00 +0000 (UTC). Opening the array at a
@@ -5012,7 +5264,7 @@ TILEDB_EXPORT int32_t tiledb_array_open_with_key(
  * @note This function is applicable only to read queries.
  * @note The config should be set before opening an array.
  */
-TILEDB_EXPORT int32_t tiledb_array_open_at_with_key(
+TILEDB_DEPRECATED_EXPORT int32_t tiledb_array_open_at_with_key(
     tiledb_ctx_t* ctx,
     tiledb_array_t* array,
     tiledb_query_type_t query_type,
@@ -5065,8 +5317,6 @@ TILEDB_EXPORT int32_t
 tiledb_array_reopen(tiledb_ctx_t* ctx, tiledb_array_t* array);
 
 /**
- * This is a deprecated API.
- *
  * Reopens a TileDB array (the array must be already open) at a specific
  * timestamp.
  *
@@ -5091,11 +5341,11 @@ tiledb_array_reopen(tiledb_ctx_t* ctx, tiledb_array_t* array);
  *      interval, the `timestamp{start, end}` values and subsequent config
  *      object should be reset for the array before reopening.
  */
-TILEDB_EXPORT int32_t tiledb_array_reopen_at(
+TILEDB_DEPRECATED_EXPORT int32_t tiledb_array_reopen_at(
     tiledb_ctx_t* ctx, tiledb_array_t* array, uint64_t timestamp);
 
 /**
- * This is a deprecated API. The start/end timestamps for opening an array
+ * The start/end timestamps for opening an array
  * are now set in the config.
  *
  * Returns the timestamp, representing time in milliseconds ellapsed since
@@ -5120,7 +5370,7 @@ TILEDB_EXPORT int32_t tiledb_array_reopen_at(
  *
  * @note The array does not need to be open to use this function.
  */
-TILEDB_EXPORT int32_t tiledb_array_get_timestamp(
+TILEDB_DEPRECATED_EXPORT int32_t tiledb_array_get_timestamp(
     tiledb_ctx_t* ctx, tiledb_array_t* array, uint64_t* timestamp);
 
 /**
@@ -5291,7 +5541,7 @@ TILEDB_EXPORT int32_t tiledb_array_create(
  * @param key_length Length in bytes of the encryption key.
  * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
  */
-TILEDB_EXPORT int32_t tiledb_array_create_with_key(
+TILEDB_DEPRECATED_EXPORT int32_t tiledb_array_create_with_key(
     tiledb_ctx_t* ctx,
     const char* array_uri,
     const tiledb_array_schema_t* array_schema,
@@ -5356,7 +5606,7 @@ TILEDB_EXPORT int32_t tiledb_array_consolidate(
  *
  * @return `TILEDB_OK` on success, and `TILEDB_ERR` on error.
  */
-TILEDB_EXPORT int32_t tiledb_array_consolidate_with_key(
+TILEDB_DEPRECATED_EXPORT int32_t tiledb_array_consolidate_with_key(
     tiledb_ctx_t* ctx,
     const char* array_uri,
     tiledb_encryption_type_t encryption_type,
@@ -6812,7 +7062,7 @@ TILEDB_EXPORT int32_t tiledb_fragment_info_load(
  * @param key_length Length in bytes of the encryption key.
  * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
  */
-TILEDB_EXPORT int32_t tiledb_fragment_info_load_with_key(
+TILEDB_DEPRECATED_EXPORT int32_t tiledb_fragment_info_load_with_key(
     tiledb_ctx_t* ctx,
     tiledb_fragment_info_t* fragment_info,
     tiledb_encryption_type_t encryption_type,
@@ -7278,6 +7528,28 @@ TILEDB_EXPORT int32_t tiledb_fragment_info_get_to_vacuum_uri(
     tiledb_fragment_info_t* fragment_info,
     uint32_t fid,
     const char** uri);
+
+/**
+ * Retrieves the array schema name a fragment.
+ *
+ * **Example:**
+ *
+ * @code{.c}
+ * tiledb_array_schema_t* array_schema;
+ * tiledb_fragment_info_get_array_schema(ctx, fragment_info, 0, &array_schema);
+ * @endcode
+ *
+ * @param ctx The TileDB context
+ * @param fragment_info The fragment info object.
+ * @param fid The index of the fragment of interest.
+ * @param array_schema The array schema to be retrieved.
+ * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
+ */
+TILEDB_EXPORT int32_t tiledb_fragment_info_get_array_schema(
+    tiledb_ctx_t* ctx,
+    tiledb_fragment_info_t* fragment_info,
+    uint32_t fid,
+    tiledb_array_schema_t** array_schema);
 
 /**
  * Dumps the fragment info in ASCII format in the selected output.
