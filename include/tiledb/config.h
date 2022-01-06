@@ -49,10 +49,13 @@ class Config;  // Forward decl for impl classes
 
 namespace impl {
 
-class ConfigIter : public std::iterator<
-                       std::forward_iterator_tag,
-                       const std::pair<std::string, std::string>> {
+class ConfigIter {
  public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = const std::pair<std::string, std::string>;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type*;
+  using reference = value_type&;
   /* ********************************* */
   /*     CONSTRUCTORS & DESTRUCTORS    */
   /* ********************************* */
@@ -418,10 +421,6 @@ class Config {
    *    Ratio of the budget allocated for array data in the sparse global
    *    order reader. <br>
    *    **Default**: 0.1
-   * - `sm.mem.reader.sparse_global_order.ratio_result_tiles` <br>
-   *    Ratio of the budget allocated for result tiles in the sparse global
-   *    order reader. <br>
-   *    **Default**: 0.05
    * - `sm.mem.reader.sparse_global_order.ratio_rcs` <br>
    *    Ratio of the budget allocated for result cell slabs in the sparse
    *    global order reader. <br>
@@ -442,14 +441,6 @@ class Config {
    *    Ratio of the budget allocated for array data in the sparse unordered
    *    with duplicates reader. <br>
    *    **Default**: 0.1
-   * - `sm.mem.reader.sparse_unordered_with_dups.ratio_result_tiles` <br>
-   *    Ratio of the budget allocated for result tiles in the sparse
-   *    unordered with duplicates reader. <br>
-   *    **Default**: 0.05
-   * - `sm.mem.reader.sparse_unordered_with_dups.ratio_rcs` <br>
-   *    Ratio of the budget allocated for result cell slabs in the sparse
-   *    unordered with duplicates reader. <br>
-   * - `vfs.read_ahead_size` <br>
    *    The maximum byte size to read-ahead from the backend. <br>
    *    **Default**: 102400
    * -  `vfs.read_ahead_cache_size` <br>
