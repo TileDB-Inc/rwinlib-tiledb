@@ -128,6 +128,38 @@ TILEDB_EXPORT int32_t tiledb_array_schema_evolution_drop_attribute(
     tiledb_array_schema_evolution_t* array_schema_evolution,
     const char* attribute_name);
 
+/**
+ * Sets timestamp range in an array schema evolution
+ *
+ * **Example:**
+ *
+ * @code{.c}
+ * uint64_t timestamp = tiledb_timestamp_now_ms();
+ * tiledb_array_schema_evolution_set_timestamp_range(ctx,
+ * array_schema_evolution, timestamp, timestamp);
+ * @endcode
+ *
+ * @param ctx The TileDB context.
+ * @param array_schema_evolution The schema evolution.
+ * @param attribute_name The name of the attribute to be dropped.
+ * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
+ */
+TILEDB_EXPORT int32_t tiledb_array_schema_evolution_set_timestamp_range(
+    tiledb_ctx_t* ctx,
+    tiledb_array_schema_evolution_t* array_schema_evolution,
+    uint64_t lo,
+    uint64_t hi);
+
+/* ********************************* */
+/*          ARRAY SCHEMA             */
+/* ********************************* */
+
+TILEDB_EXPORT int32_t tiledb_array_schema_timestamp_range(
+    tiledb_ctx_t* ctx,
+    tiledb_array_schema_t* array_schema,
+    uint64_t* lo,
+    uint64_t* hi);
+
 /* ********************************* */
 /*               ARRAY               */
 /* ********************************* */
@@ -174,6 +206,18 @@ TILEDB_EXPORT int32_t tiledb_array_upgrade_version(
 /* ********************************* */
 /*               QUERY               */
 /* ********************************* */
+
+/**
+ * Adds point ranges to the given dimension index of the subarray
+ * Effectively `add_range(x_i, x_i)` for `count` points in the
+ * target array, but set in bulk to amortize expensive steps.
+ */
+TILEDB_EXPORT int32_t tiledb_subarray_add_point_ranges(
+    tiledb_ctx_t* ctx,
+    tiledb_subarray_t* subarray,
+    uint32_t dim_idx,
+    const void* start,
+    uint64_t count);
 
 /**
  * Adds a set of point ranges along subarray dimension index. Each value
