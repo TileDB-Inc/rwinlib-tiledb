@@ -128,38 +128,6 @@ TILEDB_EXPORT int32_t tiledb_array_schema_evolution_drop_attribute(
     tiledb_array_schema_evolution_t* array_schema_evolution,
     const char* attribute_name);
 
-/**
- * Sets timestamp range in an array schema evolution
- *
- * **Example:**
- *
- * @code{.c}
- * uint64_t timestamp = tiledb_timestamp_now_ms();
- * tiledb_array_schema_evolution_set_timestamp_range(ctx,
- * array_schema_evolution, timestamp, timestamp);
- * @endcode
- *
- * @param ctx The TileDB context.
- * @param array_schema_evolution The schema evolution.
- * @param attribute_name The name of the attribute to be dropped.
- * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT int32_t tiledb_array_schema_evolution_set_timestamp_range(
-    tiledb_ctx_t* ctx,
-    tiledb_array_schema_evolution_t* array_schema_evolution,
-    uint64_t lo,
-    uint64_t hi);
-
-/* ********************************* */
-/*          ARRAY SCHEMA             */
-/* ********************************* */
-
-TILEDB_EXPORT int32_t tiledb_array_schema_timestamp_range(
-    tiledb_ctx_t* ctx,
-    tiledb_array_schema_t* array_schema,
-    uint64_t* lo,
-    uint64_t* hi);
-
 /* ********************************* */
 /*               ARRAY               */
 /* ********************************* */
@@ -206,18 +174,6 @@ TILEDB_EXPORT int32_t tiledb_array_upgrade_version(
 /* ********************************* */
 /*               QUERY               */
 /* ********************************* */
-
-/**
- * Adds point ranges to the given dimension index of the subarray
- * Effectively `add_range(x_i, x_i)` for `count` points in the
- * target array, but set in bulk to amortize expensive steps.
- */
-TILEDB_EXPORT int32_t tiledb_subarray_add_point_ranges(
-    tiledb_ctx_t* ctx,
-    tiledb_subarray_t* subarray,
-    uint32_t dim_idx,
-    const void* start,
-    uint64_t count);
 
 /**
  * Adds a set of point ranges along subarray dimension index. Each value
@@ -294,45 +250,6 @@ TILEDB_EXPORT int32_t tiledb_query_get_status_details(
     tiledb_ctx_t* ctx,
     tiledb_query_t* query,
     tiledb_query_status_details_t* status);
-
-/* ********************************* */
-/*              CONTEXT              */
-/* ********************************* */
-
-/**
- * Creates a TileDB context, which contains the TileDB storage manager
- * that manages everything in the TileDB library. This is a provisional API
- * which returns an error object when the context creation fails. This API will
- * be replaced with a more proper "v2" of context alloc in the near future. The
- * main goal is to use to this to capture potential failures to inform the v2
- * alloc design.
- *
- * **Examples:**
- *
- * Without config (i.e., use default configuration):
- *
- * @code{.c}
- * tiledb_ctx_t* ctx;
- * tiledb_error_t* error;
- * tiledb_ctx_alloc_with_error(NULL, &ctx, &error);
- * @endcode
- *
- * With some config:
- *
- * @code{.c}
- * tiledb_ctx_t* ctx;
- * tiledb_error_t* error;
- * tiledb_ctx_alloc_with_error(config, &ctx, &error);
- * @endcode
- *
- * @param[in] config The configuration parameters (`NULL` means default).
- * @param[out] ctx The TileDB context to be created.
- * @param[out] error Error object returned upon error (`NULL` if there is
- *     no error).
- * @return `TILEDB_OK` for success and `TILEDB_OOM` or `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT int32_t tiledb_ctx_alloc_with_error(
-    tiledb_config_t* config, tiledb_ctx_t** ctx, tiledb_error_t** error);
 
 #ifdef __cplusplus
 }

@@ -42,7 +42,6 @@
 #include "deleter.h"
 #include "exception.h"
 #include "query_condition.h"
-#include "subarray.h"
 #include "tiledb.h"
 #include "type.h"
 #include "utils.h"
@@ -165,7 +164,14 @@ class Query {
    * @param array Open Array object
    */
   Query(const Context& ctx, const Array& array)
-      : Query(ctx, array, array.query_type()) {
+      : ctx_(ctx)
+      , array_(array)
+      , schema_(array.schema()) {
+    tiledb_query_t* q;
+    auto type = array.query_type();
+    ctx.handle_error(
+        tiledb_query_alloc(ctx.ptr().get(), array.ptr().get(), type, &q));
+    query_ = std::shared_ptr<tiledb_query_t>(q, deleter_);
   }
 
   Query(const Query&) = default;
@@ -523,8 +529,7 @@ class Query {
    * @return Reference to this Query
    */
   template <class T>
-  TILEDB_DEPRECATED Query& add_range(
-      uint32_t dim_idx, T start, T end, T stride = 0) {
+  Query& add_range(uint32_t dim_idx, T start, T end, T stride = 0) {
     impl::type_check<T>(schema_.domain().dimension(dim_idx).type());
     auto& ctx = ctx_.get();
     ctx.handle_error(tiledb_query_add_range(
@@ -561,8 +566,7 @@ class Query {
    * @return Reference to this Query
    */
   template <class T>
-  TILEDB_DEPRECATED Query& add_range(
-      const std::string& dim_name, T start, T end, T stride = 0) {
+  Query& add_range(const std::string& dim_name, T start, T end, T stride = 0) {
     impl::type_check<T>(schema_.domain().dimension(dim_name).type());
     auto& ctx = ctx_.get();
     ctx.handle_error(tiledb_query_add_range_by_name(
@@ -595,7 +599,6 @@ class Query {
    * @param end The range end to add.
    * @return Reference to this Query
    */
-  TILEDB_DEPRECATED
   Query& add_range(
       uint32_t dim_idx, const std::string& start, const std::string& end) {
     impl::type_check<char>(schema_.domain().dimension(dim_idx).type());
@@ -632,7 +635,6 @@ class Query {
    * @param end The range end to add.
    * @return Reference to this Query
    */
-  TILEDB_DEPRECATED
   Query& add_range(
       const std::string& dim_name,
       const std::string& start,
@@ -663,7 +665,6 @@ class Query {
    * @param dim_idx The dimension index.
    * @return The number of ranges.
    */
-  TILEDB_DEPRECATED
   uint64_t range_num(unsigned dim_idx) const {
     auto& ctx = ctx_.get();
     uint64_t range_num;
@@ -685,7 +686,6 @@ class Query {
    * @param dim_name The dimension name.
    * @return The number of ranges.
    */
-  TILEDB_DEPRECATED
   uint64_t range_num(const std::string& dim_name) const {
     auto& ctx = ctx_.get();
     uint64_t range_num;
@@ -713,8 +713,7 @@ class Query {
    * @return A triplet of the form (start, end, stride).
    */
   template <class T>
-  TILEDB_DEPRECATED std::array<T, 3> range(
-      unsigned dim_idx, uint64_t range_idx) {
+  std::array<T, 3> range(unsigned dim_idx, uint64_t range_idx) {
     impl::type_check<T>(schema_.domain().dimension(dim_idx).type());
     auto& ctx = ctx_.get();
     const void *start, *end, *stride;
@@ -751,8 +750,7 @@ class Query {
    * @return A triplet of the form (start, end, stride).
    */
   template <class T>
-  TILEDB_DEPRECATED std::array<T, 3> range(
-      const std::string& dim_name, uint64_t range_idx) {
+  std::array<T, 3> range(const std::string& dim_name, uint64_t range_idx) {
     impl::type_check<T>(schema_.domain().dimension(dim_name).type());
     auto& ctx = ctx_.get();
     const void *start, *end, *stride;
@@ -786,7 +784,6 @@ class Query {
    * @param range_idx The range index.
    * @return A pair of the form (start, end).
    */
-  TILEDB_DEPRECATED
   std::array<std::string, 2> range(unsigned dim_idx, uint64_t range_idx) {
     impl::type_check<char>(schema_.domain().dimension(dim_idx).type());
     auto& ctx = ctx_.get();
@@ -825,7 +822,6 @@ class Query {
    * @param range_idx The range index.
    * @return A pair of the form (start, end).
    */
-  TILEDB_DEPRECATED
   std::array<std::string, 2> range(
       const std::string& dim_name, uint64_t range_idx) {
     impl::type_check<char>(schema_.domain().dimension(dim_name).type());
@@ -856,10 +852,6 @@ class Query {
 
   /**
    * Retrieves the estimated result size for a fixed-size attribute.
-   * This is an estimate and may not be sufficient to read all results for the
-   * requested range, for sparse arrays or array with
-   * var-length attributes.
-   * Query status must be checked and resubmitted if not complete.
    *
    * **Example:**
    *
@@ -880,10 +872,6 @@ class Query {
 
   /**
    * Retrieves the estimated result size for a variable-size attribute.
-   * This is an estimate and may not be sufficient to read all results for
-   * the requested ranges, for sparse arrays or any array with
-   * var-length attributes.
-   * Query status must be checked and resubmitted if not complete.
    *
    * **Example:**
    *
@@ -912,10 +900,6 @@ class Query {
 
   /**
    * Retrieves the estimated result size for a fixed-size, nullable attribute.
-   * This is an estimate and may not be sufficient to read all results for
-   * the requested ranges, for sparse arrays or any array with
-   * var-length attributes.
-   * Query status must be checked and resubmitted if not complete.
    *
    * **Example:**
    *
@@ -1012,11 +996,6 @@ class Query {
   }
 
   /**
-   * The query set_subarray function has been deprecated.
-   * See the documentation for Subarray::set_subarray(), or use other
-   * Subarray provided APIs.
-   * Consult the current documentation for more information.
-   *
    * Sets a subarray, defined in the order dimensions were added.
    * Coordinates are inclusive. For the case of writes, this is meaningful only
    * for dense arrays, and specifically dense writes.
@@ -1038,7 +1017,7 @@ class Query {
    * @param size The number of subarray elements.
    */
   template <typename T = uint64_t>
-  TILEDB_DEPRECATED Query& set_subarray(const T* pairs, uint64_t size) {
+  Query& set_subarray(const T* pairs, uint64_t size) {
     impl::type_check<T>(schema_.domain().type());
     auto& ctx = ctx_.get();
     if (size != schema_.domain().ndim() * 2) {
@@ -1048,6 +1027,10 @@ class Query {
     }
     ctx.handle_error(
         tiledb_query_set_subarray(ctx.ptr().get(), query_.get(), pairs));
+    subarray_cell_num_ = pairs[1] - pairs[0] + 1;
+    for (unsigned i = 2; i < size - 1; i += 2) {
+      subarray_cell_num_ *= (pairs[i + 1] - pairs[i] + 1);
+    }
     return *this;
   }
 
@@ -1070,7 +1053,7 @@ class Query {
    * per dimension.
    */
   template <typename Vec>
-  TILEDB_DEPRECATED Query& set_subarray(const Vec& pairs) {
+  Query& set_subarray(const Vec& pairs) {
     return set_subarray(pairs.data(), pairs.size());
   }
 
@@ -1091,7 +1074,7 @@ class Query {
    * @param pairs List of [start, stop] coordinates per dimension.
    */
   template <typename T = uint64_t>
-  TILEDB_DEPRECATED Query& set_subarray(const std::initializer_list<T>& l) {
+  Query& set_subarray(const std::initializer_list<T>& l) {
     return set_subarray(std::vector<T>(l));
   }
 
@@ -1105,8 +1088,7 @@ class Query {
    * @param pairs The subarray defined as pairs of [start, stop] per dimension.
    */
   template <typename T = uint64_t>
-  TILEDB_DEPRECATED Query& set_subarray(
-      const std::vector<std::array<T, 2>>& pairs) {
+  Query& set_subarray(const std::vector<std::array<T, 2>>& pairs) {
     std::vector<T> buf;
     buf.reserve(pairs.size() * 2);
     std::for_each(
@@ -1118,24 +1100,7 @@ class Query {
   }
 
   /**
-   * Prepare a query with the contents of a subarray.
-   *
-   * @param subarray The subarray to be used to prepare the query.
-   */
-  Query& set_subarray(const Subarray& subarray) {
-    auto& ctx = ctx_.get();
-    ctx.handle_error(tiledb_query_set_subarray_t(
-        ctx.ptr().get(), query_.get(), subarray.ptr().get()));
-
-    return *this;
-  }
-
-  /**
    * Set the query config.
-   *
-   * Setting the query config will also set the subarray configuration in order
-   * to maintain existing behavior. If you wish the subarray to have a different
-   * configuration than the query, set it after calling Query::set_config.
    *
    * Setting configuration with this function overrides the following
    * Query-level parameters only:
@@ -2273,20 +2238,6 @@ class Query {
     return str;
   }
 
-  /** Update the subarray data within the query from the subarray parameter.
-   *
-   * @param subarray The output subarray to receive this query's subarray data.
-   **/
-  Query& update_subarray_from_query(Subarray* subarray) {
-    tiledb_subarray_t* loc_subarray;
-    auto& ctx = ctx_.get();
-    auto& query = *this;
-    ctx.handle_error(tiledb_query_get_subarray_t(
-        ctx_.get().ptr().get(), query.ptr().get(), &loc_subarray));
-    subarray->replace_subarray_data(loc_subarray);
-    return *this;
-  }
-
   /* ********************************* */
   /*         STATIC FUNCTIONS          */
   /* ********************************* */
@@ -2365,6 +2316,9 @@ class Query {
 
   /** The schema of the array the query targets at. */
   ArraySchema schema_;
+
+  /** Number of cells set by `set_subarray`, influences `resize_buffer`. */
+  uint64_t subarray_cell_num_ = 0;
 
   /* ********************************* */
   /*          PRIVATE METHODS          */
