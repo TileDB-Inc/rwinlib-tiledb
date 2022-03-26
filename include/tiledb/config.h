@@ -389,7 +389,7 @@ class Config {
    *    **Default**: bytes
    * - `sm.query.dense.reader` <br>
    *    Which reader to use for dense queries. "refactored" or "legacy".<br>
-   *    **Default**: lagacy
+   *    **Default**: refactored
    * - `sm.query.sparse_global_order.reader` <br>
    *    Which reader to use for sparse global order queries. "refactored"
    *    or "legacy".<br>
@@ -421,10 +421,6 @@ class Config {
    *    Ratio of the budget allocated for array data in the sparse global
    *    order reader. <br>
    *    **Default**: 0.1
-   * - `sm.mem.reader.sparse_global_order.ratio_rcs` <br>
-   *    Ratio of the budget allocated for result cell slabs in the sparse
-   *    global order reader. <br>
-   *    **Default**: 0.05
    * - `sm.mem.reader.sparse_unordered_with_dups.ratio_coords` <br>
    *    Ratio of the budget allocated for coordinates in the sparse unordered
    *    with duplicates reader. <br>
@@ -452,6 +448,9 @@ class Config {
    *    (except parallel S3 writes, which are controlled by
    *    `vfs.s3.multipart_part_size`.) <br>
    *    **Default**: 10MB
+   * - `vfs.max_batch_size` <br>
+   *    The maximum number of bytes in a VFS read operation<br>
+   *    **Default**: UINT64_MAX
    * - `vfs.min_batch_size` <br>
    *    The minimum number of bytes in a VFS read operation<br>
    *    **Default**: 20MB
@@ -468,10 +467,6 @@ class Config {
    *    The maximum number of parallel operations on objects with `file:///`
    *    URIs. <br>
    *    **Default**: `sm.io_concurrency_level`
-   * - `vfs.file.enable_filelocks` <br>
-   *    If set to `false`, file locking operations are no-ops for `file:///`
-   *    URIs in VFS. <br>
-   *    **Default**: `true`
    * - `vfs.azure.storage_account_name` <br>
    *    Set the Azure Storage Account name. <br>
    *    **Default**: ""

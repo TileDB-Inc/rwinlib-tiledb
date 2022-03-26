@@ -61,7 +61,6 @@ class Deleter {
   /* ********************************* */
 
   Deleter() = default;
-  Deleter(const Deleter&) = default;
 
   /* ********************************* */
   /*              DELETERS             */
@@ -73,6 +72,10 @@ class Deleter {
 
   void operator()(tiledb_array_t* p) const {
     tiledb_array_free(&p);
+  }
+
+  void operator()(tiledb_subarray_t* p) const {
+    tiledb_subarray_free(&p);
   }
 
   void operator()(tiledb_query_t* p) const {
@@ -121,6 +124,10 @@ class Deleter {
 
   void operator()(tiledb_error_t* p) const {
     tiledb_error_free(&p);
+  }
+
+  void operator()(tiledb_group_t* p) const {
+    tiledb_group_free(&p);
   }
 
  private:
