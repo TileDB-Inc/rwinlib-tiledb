@@ -249,7 +249,6 @@ class Dimension {
         return "";
       case TILEDB_BLOB:
       case TILEDB_CHAR:
-      case TILEDB_BOOL:
       case TILEDB_STRING_UTF8:
       case TILEDB_STRING_UTF16:
       case TILEDB_STRING_UTF32:
@@ -368,7 +367,6 @@ class Dimension {
         return "";
       case TILEDB_BLOB:
       case TILEDB_CHAR:
-      case TILEDB_BOOL:
       case TILEDB_STRING_UTF8:
       case TILEDB_STRING_UTF16:
       case TILEDB_STRING_UTF32:
