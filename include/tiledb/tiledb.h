@@ -57,6 +57,21 @@
 /*               MACROS              */
 /* ********************************* */
 
+/**
+  * TILEDB_NOEXCEPT usage:
+  *
+  * 1. Header files that may appear in C programs (such as tiledb.h) must use
+  the macro because we require API entry points not to throw. We enforce that
+  with noexcept in C++ declarations but must omit that keyword in a C
+  declaration.
+    2. Definitions of C API entry point functions (which may not appear in C
+  headers) are compiled as C++ and should be declared noexcept. These functions
+  are wrapped versions of API implementation functions.
+    3. Implementation functions should not be declared noexcept. They have no
+  way of providing uniform error handling and should defer to the wrapper for
+  that.
+*/
+
 #ifdef __cplusplus
 #define TILEDB_NOEXCEPT noexcept
 #else
@@ -1025,18 +1040,6 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  *    `fragment_meta` (remove only consolidated fragment metadata), or
  *    `array_meta` (remove consolidated array metadata files). <br>
  *    **Default**: fragments
- * - `sm.vacuum.timestamp_start` <br>
- *    **Experimental** <br>
- *    When set, an array will be vacuumed between this value and
- *    `sm.vacuum.timestamp_end` (inclusive). <br>
- *    Only for `fragments` and `array_meta` vacuum mode. <br>
- *    **Default**: 0
- * - `sm.vacuum.timestamp_end` <br>
- *    **Experimental** <br>
- *    When set, an array will be vacuumed between `sm.vacuum.timestamp_start`
- *    and this value (inclusive). <br>
- *    Only for `fragments` and `array_meta` vacuum mode. <br>
- *    **Default**: UINT64_MAX
  * - `sm.consolidation_mode` <br>
  *    The consolidation mode, one of `fragments` (consolidate all fragments),
  *    `fragment_meta` (consolidate only fragment metadata footers to a single
@@ -1081,6 +1084,11 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  *    `sm.consolidation.timestamp_start` and this value (inclusive). <br>
  *    Only for `fragments` and `array_meta` consolidation mode. <br>
  *    **Default**: UINT64_MAX
+ * - `sm.consolidation.with_timestamps` <br>
+ *    **Experimental** <br>
+ *    Consolidation with timestamps will include, for each cells, the
+ *    timestamp at which the cell was written. <br>
+ *    **Default**: "false"
  * - `sm.memory_budget` <br>
  *    The memory budget for tiles of fixed-sized attributes (or offsets for
  *    var-sized attributes) to be fetched during reads.<br>
