@@ -333,6 +333,10 @@ class Config {
    *    The number of consolidation steps to be performed when executing
    *    the consolidation algorithm.<br>
    *    **Default**: 1
+   * - `sm.consolidation.purge_deleted_cells` <br>
+   *    **Experimental** <br>
+   *    Purge deleted cells from the consolidated fragment or not.<br>
+   *    **Default**: false
    * - `sm.consolidation.step_min_frags` <br>
    *    The minimum number of fragments to consolidate in a single step.<br>
    *    **Default**: UINT32_MAX
@@ -355,11 +359,6 @@ class Config {
    *    `sm.consolidation.timestamp_start` and this value (inclusive). <br>
    *    Only for `fragments` and `array_meta` consolidation mode. <br>
    *    **Default**: UINT64_MAX
-   * - `sm.consolidation.with_timestamps` <br>
-   *    **Experimental** <br>
-   *    Consolidation with timestamps will include, for each cells, the
-   *    timestamp at which the cell was written. <br>
-   *    **Default**: "false"
    * - `sm.memory_budget` <br>
    *    The memory budget for tiles of fixed-sized attributes (or offsets for
    *    var-sized attributes) to be fetched during reads.<br>
@@ -709,13 +708,25 @@ class Config {
    *    failed REST request <br>
    *    **Default**: 1.25
    * - `rest.curl.verbose` <br>
-   * Set curl to run in verbose mode for REST requests <br>
-   * curl will print to stdout with this option
+   *    Set curl to run in verbose mode for REST requests <br>
+   *    curl will print to stdout with this option
+   *    **Default**: false
+   * - `rest.load_metadata_on_array_open` <br>
+   *    If true, array metadata will be loaded and sent to server together with
+   *    the open array <br>
+   *    **Default**: true
+   * - `rest.load_non_empty_domain_on_array_open` <br>
+   *    If true, array non empty domain will be loaded and sent to server
+   *    together with the open array <br>
+   *    **Default**: true
+   * - `rest.use_refactored_array_open` <br>
+   *    If true, the new, experimental REST routes and APIs for opening an array
+   *    will be used <br>
    *    **Default**: false
    * - `filestore.buffer_size` <br>
    *    Specifies the size in bytes of the internal buffers used in the
-   * filestore API. The size should be bigger than the minimum tile size
-   * filestore currently supports, that is currently 1024bytes. <br>
+   *    filestore API. The size should be bigger than the minimum tile size
+   *    filestore currently supports, that is currently 1024bytes. <br>
    *    **Default**: 100MB
    */
   Config& set(const std::string& param, const std::string& value) {
