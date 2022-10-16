@@ -265,6 +265,10 @@ class Config {
    *
    * **Parameters**
    *
+   * - `sm.allow_updates_experimental` <br>
+   *    **Experimental** <br>
+   *    Allow update queries. Experimental for testing purposes, do not use.<br>
+   *    **Default**: false
    * - `sm.dedup_coords` <br>
    *    If `true`, cells with duplicate coordinates will be removed during
    *    sparse fragment writes. Note that ties during deduplication are broken
@@ -307,14 +311,21 @@ class Config {
    *    Upper-bound on number of threads to allocate for IO-bound tasks. <br>
    *    **Default*: # cores
    * - `sm.vacuum.mode` <br>
-   *    The vacuuming mode, one of `fragments` (remove consolidated fragments),
-   *    `fragment_meta` (remove only consolidated fragment metadata), or
-   *    `array_meta` (remove consolidated array metadata files). <br>
-   *    **Default**: fragments
+   *    The vacuuming mode, one of
+   *    `commits` (remove only consolidated commit files),
+   *    `fragments` (remove only consolidated fragments),
+   *    `fragment_meta` (remove only consolidated fragment metadata),
+   *    `array_meta` (remove only consolidated array metadata files), or
+   *    `group_meta` (remove only consolidate group metadata only).
+   *    <br>
+   *    **Default**: "fragments"
    * - `sm.consolidation_mode` <br>
-   *    The consolidation mode, one of `fragments` (consolidate all fragments),
+   *    The consolidation mode, one of
+   *    `commits` (consolidate all commit files),
+   *    `fragments` (consolidate all fragments),
    *    `fragment_meta` (consolidate only fragment metadata footers to a single
-   *    file), or `array_meta` (consolidate array metadata only). <br>
+   * file), `array_meta` (consolidate array metadata only), or `group_meta`
+   * (consolidate group metadata only). <br>
    *    **Default**: "fragments"
    * - `sm.consolidation.amplification` <br>
    *    The factor by which the size of the dense fragment resulting
@@ -379,6 +390,11 @@ class Config {
    *    The offsets format (`bytes` or `elements`) to be used for
    *    var-sized attributes.<br>
    *    **Default**: bytes
+   * - `sm.query.dense.qc_coords_mode` <br>
+   *    **Experimental** <br>
+   *    Reads only the coordinates of the dense query that matched the query
+   *    condition.<br>
+   *    **Default**: false
    * - `sm.query.dense.reader` <br>
    *    Which reader to use for dense queries. "refactored" or "legacy".<br>
    *    **Default**: refactored
@@ -438,6 +454,11 @@ class Config {
    *    The end timestamp used for opening the group. <br>
    *    Also used for the write timestamp if set. <br>
    *    **Default**: UINT64_MAX
+   * - `sm.fragment_info.preload_mbrs` <br>
+   *    If `true` MBRs will be loaded at the same time as the rest of fragment
+   *    info, otherwise they will be loaded lazily when some info related to
+   *    MBRs is requested by the user. <br>
+   *    **Default**: false
    * -  `vfs.read_ahead_cache_size` <br>
    *    The the total maximum size of the read-ahead cache, which is an LRU.
    *    <br>
@@ -456,6 +477,10 @@ class Config {
    * - `vfs.min_batch_gap` <br>
    *    The minimum number of bytes between two VFS read batches.<br>
    *    **Default**: 500KB
+   * - `vfs.disable_batching` <br>
+   *    **Experimental** <br>
+   *    Disables tile batching from VFS, making direct reads.<br>
+   *    **Default**: false
    * - `vfs.file.posix_file_permissions` <br>
    *    permissions to use for posix file system with file or dir creation.<br>
    *    **Default**: 644
@@ -723,6 +748,9 @@ class Config {
    *    If true, the new, experimental REST routes and APIs for opening an array
    *    will be used <br>
    *    **Default**: false
+   * - `rest.curl.buffer_size` <br>
+   *    Set curl buffer size for REST requests <br>
+   *    **Default**: 524288 (512KB)
    * - `filestore.buffer_size` <br>
    *    Specifies the size in bytes of the internal buffers used in the
    *    filestore API. The size should be bigger than the minimum tile size

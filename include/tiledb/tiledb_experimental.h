@@ -233,6 +233,30 @@ TILEDB_EXPORT int32_t tiledb_array_upgrade_version(
 /* ********************************* */
 
 /**
+ * Adds a query update values to be applied on an update.
+ *
+ * **Example:**
+ *
+ * @code{.c}
+ * uint32_t value = 5;
+ * tiledb_query_add_update_value(
+ *   ctx, query, "longitude", &value, sizeof(value), &update_value);
+ * @endcode
+ *
+ * @param ctx The TileDB context.
+ * @param query The TileDB query.
+ * @param field_name The attribute name.
+ * @param update_value The value to set.
+ * @param update_value_size The byte size of `update_value`.
+ */
+TILEDB_EXPORT int32_t tiledb_query_add_update_value(
+    tiledb_ctx_t* ctx,
+    tiledb_query_t* query,
+    const char* field_name,
+    const void* update_value,
+    uint64_t update_value_size) TILEDB_NOEXCEPT;
+
+/**
  * Adds point ranges to the given dimension index of the subarray
  * Effectively `add_range(x_i, x_i)` for `count` points in the
  * target array, but set in bulk to amortize expensive steps.
@@ -831,6 +855,42 @@ TILEDB_EXPORT int32_t tiledb_group_get_member_by_name(
     const char* name,
     char** uri,
     tiledb_object_t* type) TILEDB_NOEXCEPT;
+
+/* (clang format was butchering the tiledb_group_add_member() calls) */
+/* clang-format off */
+/**
+ * Get a member of a group by name and relative characteristic of that name
+ *
+ * **Example:**
+ *
+ * @code{.c}
+ * tiledb_group_t* group;
+ * tiledb_group_alloc(ctx, "s3://tiledb_bucket/my_group", &group);
+ * tiledb_group_open(ctx, group, TILEDB_WRITE);
+ * tiledb_group_add_member(ctx, group, "s3://tiledb_bucket/my_array", true,
+ *     "array1"); 
+ * tiledb_group_add_member(ctx, group, "s3://tiledb_bucket/my_group_2", 
+ *     false, "group2");
+ *
+ * tiledb_group_close(ctx, group);
+ * tiledb_group_open(ctx, group, TILEDB_READ);
+ * uint8_t is_relative;
+ * tiledb_group_get_is_relative_uri_by_name(ctx, group, "array1", &is_relative);
+ *
+ * @endcode
+ *
+ * @param ctx The TileDB context.
+ * @param group An group opened in READ mode.
+ * @param name name of member to fetch
+ * @param is_relative to receive relative characteristic of named member
+ * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
+ */
+/* clang-format on */
+TILEDB_EXPORT int32_t tiledb_group_get_is_relative_uri_by_name(
+    tiledb_ctx_t* ctx,
+    tiledb_group_t* group,
+    const char* name,
+    uint8_t* relative) TILEDB_NOEXCEPT;
 
 /**
  * Checks if the group is open.
