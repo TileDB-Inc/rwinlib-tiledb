@@ -91,6 +91,14 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  *
  * **Parameters**
  *
+ * - `sm.allow_separate_attribute_writes` <br>
+ *    **Experimental** <br>
+ *    Allow separate attribute write queries.<br>
+ *    **Default**: false
+ * - `sm.allow_updates_experimental` <br>
+ *    **Experimental** <br>
+ *    Allow update queries. Experimental for testing purposes, do not use.<br>
+ *    **Default**: false
  * - `sm.dedup_coords` <br>
  *    If `true`, cells with duplicate coordinates will be removed during sparse
  *    fragment writes. Note that ties during deduplication are broken
@@ -115,9 +123,6 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  *    Checks if the coordinates obey the global array order. Applicable only
  *    to sparse writes in global order.
  *    **Default**: true
- * - `sm.tile_cache_size` <br>
- *    The tile cache size in bytes. Any `uint64_t` value is acceptable. <br>
- *    **Default**: 10,000,000
  * - `sm.enable_signal_handlers` <br>
  *    Determines whether or not TileDB will install signal handlers. <br>
  *    **Default**: true
@@ -136,7 +141,7 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  *    `group_meta` (remove only consolidate group metadata only).
  *    <br>
  *    **Default**: fragments
- * - `sm.consolidation_mode` <br>
+ * - `sm.consolidation.mode` <br>
  *    The consolidation mode, one of
  *    `commits` (consolidate all commit files),
  *    `fragments` (consolidate all fragments),
@@ -226,8 +231,11 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  *    **Default**: refactored
  * - `sm.mem.malloc_trim` <br>
  *    Should malloc_trim be called on context and query destruction? This might
- * reduce residual memory usage. <br>
+ *    reduce residual memory usage. <br>
  *    **Default**: true
+ * - `sm.mem.tile_memory_budget` <br>
+ *    Tile memory budget, only respected in the dense reader for now. <br>
+ *    **Default**: 2GB
  * - `sm.mem.total_budget` <br>
  *    Memory budget for readers and writers. <br>
  *    **Default**: 10GB
@@ -304,10 +312,6 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  * - `vfs.min_batch_gap` <br>
  *    The minimum number of bytes between two VFS read batches.<br>
  *    **Default**: 500KB
- * - `vfs.disable_batching` <br>
- *    **Experimental** <br>
- *    Disables tile batching from VFS, making direct reads.<br>
- *    **Default**: false
  * - `vfs.file.posix_file_permissions` <br>
  *    Permissions to use for posix file system with file creation.<br>
  *    **Default**: 644
@@ -317,7 +321,7 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  * - `vfs.file.max_parallel_ops` <br>
  *    The maximum number of parallel operations on objects with `file:///`
  *    URIs. <br>
- *    **Default**: `sm.io_concurrency_level`
+ *    **Default**: `1`
  * - `vfs.azure.storage_account_name` <br>
  *    Set the Azure Storage Account name. <br>
  *    **Default**: ""
@@ -533,10 +537,6 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  *    Authentication token for REST server (used instead of
  *    username/password). <br>
  *    **Default**: ""
- * - `rest.resubmit_incomplete` <br>
- *    If true, incomplete queries received from server are automatically
- *    resubmitted before returning to user control. <br>
- *    **Default**: "true"
  * - `rest.ignore_ssl_validation` <br>
  *    Have curl ignore ssl peer and host validation for REST server. <br>
  *    **Default**: false
@@ -574,6 +574,10 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  *    If true, the new, experimental REST routes and APIs for opening an array
  *    will be used <br>
  *    **Default**: false
+ * - `rest.use_refactored_array_open_and_query_submit` <br>
+ *    If true, the new, experimental REST routes and APIs for opening an array
+ *    and submitting a query will be used <br>
+ *    **Default**: false
  * - `rest.curl.buffer_size` <br>
  *    Set curl buffer size for REST requests <br>
  *    **Default**: 524288 (512KB)
@@ -587,7 +591,7 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  *
  * @code{.c}
  * tiledb_error_t* error = NULL;
- * tiledb_config_set(config, "sm.tile_cache_size", "1000000", &error);
+ * tiledb_config_set(config, "sm.memory_budget", "1000000", &error);
  * @endcode
  *
  * @param config The config object.
@@ -611,7 +615,7 @@ TILEDB_EXPORT capi_return_t tiledb_config_set(
  * @code{.c}
  * const char* value;
  * tiledb_error_t* error = NULL;
- * tiledb_config_get(config, "sm.tile_cache_size", &value, &error);
+ * tiledb_config_get(config, "sm.memory_budget", &value, &error);
  * @endcode
  *
  * @param config The config object.
@@ -636,7 +640,7 @@ TILEDB_EXPORT capi_return_t tiledb_config_get(
  *
  * @code{.c}
  * tiledb_error_t* error = NULL;
- * tiledb_config_unset(config, "sm.tile_cache_size", &error);
+ * tiledb_config_unset(config, "sm.memory_budget", &error);
  * @endcode
  *
  * @param config The config object.
