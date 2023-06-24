@@ -334,7 +334,12 @@ class Array {
   }
 
   /**
-   * Deletes the data written to the array with the input uri.
+   * Deletes all data written to the array with the input uri.
+   *
+   * @param ctx TileDB context
+   * @param uri The Array's URI
+   *
+   * @post This is destructive; the array may not be reopened after delete.
    */
   static void delete_array(const Context& ctx, const std::string& uri) {
     ctx.handle_error(tiledb_array_delete(ctx.ptr().get(), uri.c_str()));
@@ -343,6 +348,11 @@ class Array {
   /**
    * Deletes the fragments written between the input timestamps of an array
    * with the input uri.
+   *
+   * @param uri The URI of the fragments' parent Array.
+   * @param timestamp_start The epoch start timestamp in milliseconds.
+   * @param timestamp_end The epoch end timestamp in milliseconds. Use
+   * UINT64_MAX for the current timestamp.
    */
   void delete_fragments(
       const std::string& uri,
@@ -511,7 +521,11 @@ class Array {
     return timestamp_end;
   }
 
-  /** Sets the array config. */
+  /**
+   * Sets the array config.
+   *
+   * @pre The array must be closed.
+   */
   void set_config(const Config& config) const {
     auto& ctx = ctx_.get();
     ctx.handle_error(tiledb_array_set_config(
