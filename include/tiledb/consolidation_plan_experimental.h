@@ -40,8 +40,16 @@ namespace tiledb {
 class ConsolidationPlan {
  public:
   /**
-   * Constructor. This creates the consolidation plan for an array with the
-   * given desired maximum fragment size.
+   * @brief Constructor. This opens the group for the given query type. The
+   * destructor calls the `close()` method.
+   *
+   * **Example:**
+   *
+   * @code{.cpp}
+   * // Open the group for reading
+   * tiledb::Context ctx;
+   * tiledb::Group group(ctx, "s3://bucket-name/group-name", TILEDB_READ);
+   * @endcode
    *
    * @param ctx TileDB context.
    * @param array The array.
@@ -82,8 +90,6 @@ class ConsolidationPlan {
 
   /**
    * Returns the number of fragments for a node in the consolidation plan.
-   *
-   * @param node_idx Node index to retreive the data for.
    */
   uint64_t num_fragments(uint64_t node_idx) const {
     uint64_t num;
@@ -96,9 +102,6 @@ class ConsolidationPlan {
 
   /**
    * Returns the fragment uri for a node/fragment in the consolidation plan.
-   *
-   * @param node_idx Node index to retreive the data for.
-   * @param fragment_idx Fragment index to retreive the data for.
    */
   std::string fragment_uri(uint64_t node_idx, uint64_t fragment_idx) const {
     const char* uri_c;
