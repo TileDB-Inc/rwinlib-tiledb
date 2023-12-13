@@ -37,7 +37,6 @@
 
 #include "tiledb.h"
 
-#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
