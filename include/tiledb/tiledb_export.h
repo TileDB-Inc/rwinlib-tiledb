@@ -7,12 +7,12 @@
 #  define TILEDB_NO_EXPORT
 #else
 #  ifndef TILEDB_EXPORT
-#    ifdef TILEDB_CORE_OBJECTS_EXPORTS
+#    ifdef tiledb_EXPORTS
         /* We are building this library */
-#      define TILEDB_EXPORT __declspec(dllexport)
+#      define TILEDB_EXPORT 
 #    else
         /* We are using this library */
-#      define TILEDB_EXPORT __declspec(dllimport)
+#      define TILEDB_EXPORT 
 #    endif
 #  endif
 
