@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 ## From the rtools4 (and *not* msys2 which is the next compiler set,
 ## aka what may be used for 'r-devel') build: download the two artifacts
 ## to the ~/Downloads/ directory (i.e. the default location on Ubuntu)
