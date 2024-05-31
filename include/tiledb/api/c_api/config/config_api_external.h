@@ -102,13 +102,16 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  * - `sm.dedup_coords` <br>
  *    If `true`, cells with duplicate coordinates will be removed during sparse
  *    fragment writes. Note that ties during deduplication are broken
- *    arbitrarily. <br>
+ *    arbitrarily. Also note that this check means that it will take longer to
+ *    perform the write operation. <br>
  *    **Default**: false
  * - `sm.check_coord_dups` <br>
  *    This is applicable only if `sm.dedup_coords` is `false`.
  *    If `true`, an error will be thrown if there are cells with duplicate
  *    coordinates during sparse fragmnet writes. If `false` and there are
- *    duplicates, the duplicates will be written without errors. <br>
+ *    duplicates, the duplicates will be written without errors. Note that this
+ *    check is much ligher weight than the coordinate deduplication check
+ *    enabled by `sm.dedup_coords`. <br>
  *    **Default**: true
  * - `sm.check_coord_oob` <br>
  *    If `true`, an error will be thrown if there are cells with coordinates
@@ -168,11 +171,6 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  *    The size (in bytes) of the attribute buffers used during
  *    consolidation. <br>
  *    **Default**: 50,000,000
- * - `sm.consolidation.total_buffer_size` <br>
- *    **Deprecated**
- *    The size (in bytes) of all attribute buffers used during
- *    consolidation. <br>
- *    **Default**: 2,147,483,648
  * - `sm.consolidation.max_fragment_size` <br>
  *    **Experimental** <br>
  *    The size (in bytes) of the maximum on-disk fragment size that will be
@@ -258,6 +256,26 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  * - `sm.mem.total_budget` <br>
  *    Memory budget for readers and writers. <br>
  *    **Default**: 10GB
+ * - `sm.mem.consolidation.buffers_weight` <br>
+ *    Weight used to split `sm.mem.total_budget` and assign to the
+ *    consolidation buffers. The budget is split across 3 values,
+ *    `sm.mem.consolidation.buffers_weight`,
+ *    `sm.mem.consolidation.reader_weight` and
+ *    `sm.mem.consolidation.writer_weight`. <br>
+ *    **Default**: 1
+ * - `sm.mem.consolidation.reader_weight` <br>
+ *    Weight used to split `sm.mem.total_budget` and assign to the
+ *    reader query. The budget is split across 3 values,
+ *    `sm.mem.consolidation.buffers_weight`,
+ *    `sm.mem.consolidation.reader_weight` and
+ *    `sm.mem.consolidation.writer_weight`. <br>
+ *    **Default**: 3
+ *    Weight used to split `sm.mem.total_budget` and assign to the
+ *    writer query. The budget is split across 3 values,
+ *    `sm.mem.consolidation.buffers_weight`,
+ *    `sm.mem.consolidation.reader_weight` and
+ *    `sm.mem.consolidation.writer_weight`. <br>
+ *    **Default**: 2
  * - `sm.mem.reader.sparse_global_order.ratio_coords` <br>
  *    Ratio of the budget allocated for coordinates in the sparse global
  *    order reader. <br>
@@ -389,7 +407,8 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  *    attempts, in milliseconds.
  *    **Default**: 60000
  * - `vfs.gcs.project_id` <br>
- *    Set the GCS project id. <br>
+ *    Set the GCS project ID to create new buckets to. Not required unless you
+ *    are going to use the VFS to create buckets. <br>
  *    **Default**: ""
  * - `vfs.gcs.service_account_key` <br>
  *    **Experimental** <br>
@@ -623,6 +642,10 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  *    Authentication token for REST server (used instead of
  *    username/password). <br>
  *    **Default**: ""
+ * - `rest.resubmit_incomplete` <br>
+ *    If true, incomplete queries received from server are automatically
+ *    resubmitted before returning to user control. <br>
+ *    **Default**: "true"
  * - `rest.ignore_ssl_validation` <br>
  *    Have curl ignore ssl peer and host validation for REST server. <br>
  *    **Default**: false
@@ -657,13 +680,13 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  *    with the open array <br>
  *    **Default**: true
  * - `rest.use_refactored_array_open` <br>
- *    If true, the new, experimental REST routes and APIs for opening an array
+ *    If true, the new REST routes and APIs for opening an array
  *    will be used <br>
- *    **Default**: false
+ *    **Default**: true
  * - `rest.use_refactored_array_open_and_query_submit` <br>
- *    If true, the new, experimental REST routes and APIs for opening an array
- *    and submitting a query will be used <br>
- *    **Default**: false
+ *    If true, the new REST routes and APIs for opening an array and submitting
+ * a query will be used <br>
+ *    **Default**: true
  * - `rest.curl.buffer_size` <br>
  *    Set curl buffer size for REST requests <br>
  *    **Default**: 524288 (512KB)
