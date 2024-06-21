@@ -387,9 +387,7 @@ class QueryExperimental {
    * tiledb::Context ctx;
    * auto array = Array(ctx, uri, TILEDB_READ);
    * Query query(ctx, array);
-   * Subarray subarray(ctx, array);
-   * subarray.add_range("dim", 1, 5);
-   * query.set_subarray(subarray);
+   * query.add_range("dim", 1, 5)
    * QueryChannel default_channel =
    *    QueryExperimental::get_default_channel(query);
    * ChannelOperation operation =
