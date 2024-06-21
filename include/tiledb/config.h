@@ -276,14 +276,16 @@ class Config {
    * - `sm.dedup_coords` <br>
    *    If `true`, cells with duplicate coordinates will be removed during
    *    sparse fragment writes. Note that ties during deduplication are broken
-   *    arbitrarily. <br>
+   *    arbitrarily. Also note that this check means that it will take longer to
+   *    perform the write operation. <br>
    *    **Default**: false
    * - `sm.check_coord_dups` <br>
    *    This is applicable only if `sm.dedup_coords` is `false`.
    *    If `true`, an error will be thrown if there are cells with duplicate
-   *    coordinates during sparse fragment writes. If `false` and there are
-   *    duplicates, the duplicates will be written without errors. <br>
-   *    **Default**: true
+   *    coordinates during sparse fragmnet writes. If `false` and there are
+   *    duplicates, the duplicates will be written without errors. Note that
+   *    this check is much ligher weight than the coordinate deduplication check
+   *    enabled by `sm.dedup_coords`. <br>
    * - `sm.check_coord_oob` <br>
    *    If `true`, an error will be thrown if there are cells with coordinates
    *    falling outside the array domain during sparse fragment writes. <br>
@@ -344,11 +346,6 @@ class Config {
    *    The size (in bytes) of the attribute buffers used during
    *    consolidation. <br>
    *    **Default**: 50,000,000
-   * - `sm.consolidation.total_buffer_size` <br>
-   *    **Deprecated**
-   *    The size (in bytes) of all attribute buffers used during
-   *    consolidation. <br>
-   *    **Default**: 2,147,483,648
    * - `sm.consolidation.max_fragment_size` <br>
    *    **Experimental** <br>
    *    The size (in bytes) of the maximum on-disk fragment size that will be
@@ -435,11 +432,29 @@ class Config {
    *    incur performance penalties during memory movement operations. It is a
    *    soft limit that we might go over if a single tile doesn't fit into
    *    memory, we will allow to load that tile if it still fits within
-   *    `sm.mem.total_budget`. <br>
-   *    **Default**: 1GB
    * - `sm.mem.total_budget` <br>
    *    Memory budget for readers and writers. <br>
    *    **Default**: 10GB
+   * - `sm.mem.consolidation.buffers_weight` <br>
+   *    Weight used to split `sm.mem.total_budget` and assign to the
+   *    consolidation buffers. The budget is split across 3 values,
+   *    `sm.mem.consolidation.buffers_weight`,
+   *    `sm.mem.consolidation.reader_weight` and
+   *    `sm.mem.consolidation.writer_weight`. <br>
+   *    **Default**: 1
+   * - `sm.mem.consolidation.reader_weight` <br>
+   *    Weight used to split `sm.mem.total_budget` and assign to the
+   *    reader query. The budget is split across 3 values,
+   *    `sm.mem.consolidation.buffers_weight`,
+   *    `sm.mem.consolidation.reader_weight` and
+   *    `sm.mem.consolidation.writer_weight`. <br>
+   *    **Default**: 3
+   *    Weight used to split `sm.mem.total_budget` and assign to the
+   *    writer query. The budget is split across 3 values,
+   *    `sm.mem.consolidation.buffers_weight`,
+   *    `sm.mem.consolidation.reader_weight` and
+   *    `sm.mem.consolidation.writer_weight`. <br>
+   *    **Default**: 2
    * - `sm.mem.reader.sparse_global_order.ratio_coords` <br>
    *    Ratio of the budget allocated for coordinates in the sparse global
    *    order reader. <br>
@@ -567,7 +582,8 @@ class Config {
    *    attempts, in milliseconds.
    *    **Default**: 60000
    * - `vfs.gcs.project_id` <br>
-   *    Set the GCS project id. <br>
+   *    Set the GCS project ID to create new buckets to. Not required unless you
+   *    are going to use the VFS to create buckets. <br>
    *    **Default**: ""
    * - `vfs.gcs.service_account_key` <br>
    *    **Experimental** <br>
@@ -818,6 +834,10 @@ class Config {
    *    Authentication token for REST server (used instead of
    *    username/password). <br>
    *    **Default**: ""
+   * - `rest.resubmit_incomplete` <br>
+   *    If true, incomplete queries received from server are automatically
+   *    resubmitted before returning to user control. <br>
+   *    **Default**: "true"
    * - `rest.ignore_ssl_validation` <br>
    *    Have curl ignore ssl peer and host validation for REST server. <br>
    *    **Default**: false
