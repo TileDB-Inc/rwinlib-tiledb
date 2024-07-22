@@ -696,19 +696,19 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  *    with the open array <br>
  *    **Default**: true
  * - `rest.use_refactored_array_open` <br>
- *    If true, the new, experimental REST routes and APIs for opening an array
+ *    If true, the new REST routes and APIs for opening an array
  *    will be used <br>
- *    **Default**: false
+ *    **Default**: true
  * - `rest.use_refactored_array_open_and_query_submit` <br>
- *    If true, the new, experimental REST routes and APIs for opening an array
- *    and submitting a query will be used <br>
- *    **Default**: false
+ *    If true, the new REST routes and APIs for opening an array and submitting
+ * a query will be used <br>
+ *    **Default**: true
  * - `rest.curl.buffer_size` <br>
  *    Set curl buffer size for REST requests <br>
  *    **Default**: 524288 (512KB)
  * - `rest.capnp_traversal_limit` <br>
  *    CAPNP traversal limit used in the deserialization of messages(bytes) <br>
- *    **Default**: 536870912 (512MB)
+ *    **Default**: 2147483648 (2GB)
  * - `rest.custom_headers.*` <br>
  *    (Optional) Prefix for custom headers on REST requests. For each custom
  *    header, use "rest.custom_headers.header_key" = "header_value" <br>
