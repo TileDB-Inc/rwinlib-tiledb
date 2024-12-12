@@ -374,6 +374,44 @@ TILEDB_EXPORT capi_return_t tiledb_group_add_member(
     const char* name) TILEDB_NOEXCEPT;
 
 /**
+ * Add a member with a known type to a group
+ * The caller should make sure that the member exists and the correct type is
+ * provided for the member being added as this API will not check it for
+ * existence or correctness in favor of efficiency and results can be undefined
+ * otherwise.
+ *
+ * **Example:**
+ *
+ * @code{.c}
+ * tiledb_group_t* group;
+ * tiledb_group_alloc(ctx, "s3://tiledb_bucket/my_group", &group);
+ * tiledb_group_open(ctx, group, TILEDB_WRITE);
+ * tiledb_group_add_member_with_type(ctx, group, "s3://tiledb_bucket/my_array",
+ * TILEDB_ARRAY);
+ * tiledb_group_add_member_with_type(ctx, group,
+ * "s3://tiledb_bucket/my_group_2", TILEDB_GROUP);
+ *
+ * tiledb_group_close(ctx, group);
+ * @endcode
+ *
+ * @param ctx The TileDB context.
+ * @param group An group opened in WRITE mode.
+ * @param uri URI of member to add
+ * @param relative is the URI relative to the group
+ * @param name optional name group member can be given to be looked up by.
+ * Can be set to NULL.
+ * @param type the type of the member getting added if known in advance.
+ * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
+ */
+TILEDB_EXPORT capi_return_t tiledb_group_add_member_with_type(
+    tiledb_ctx_t* ctx,
+    tiledb_group_t* group,
+    const char* uri,
+    const uint8_t relative,
+    const char* name,
+    tiledb_object_t type) TILEDB_NOEXCEPT;
+
+/**
  * Remove a member from a group
  *
  * * @code{.c}
@@ -583,19 +621,47 @@ TILEDB_EXPORT capi_return_t tiledb_group_get_query_type(
     tiledb_query_type_t* query_type) TILEDB_NOEXCEPT;
 
 /**
- * Dump a string representation of a group
+ * Dump a string representation of a group.
+ *
+ * Deprecated, use tiledb_group_dump_str_v2 instead.
  *
  * @param ctx The TileDB context.
  * @param group The group.
  * @param dump_ascii The output string. The caller takes ownership
  *   of the c-string.
- * @param recursive should we recurse into sub-groups
+ * @param recursive True if the dump should recurse into subgroups.
  * @return  `TILEDB_OK` for success and `TILEDB_ERR` for error.
  */
-TILEDB_EXPORT capi_return_t tiledb_group_dump_str(
+TILEDB_DEPRECATED_EXPORT capi_return_t tiledb_group_dump_str(
     tiledb_ctx_t* ctx,
     tiledb_group_t* group,
     char** dump_ascii,
+    const uint8_t recursive) TILEDB_NOEXCEPT;
+
+/**
+ * Dump a string representation of a group.
+ *
+ * The output string handle must be freed by the user after use.
+ *
+ * **Example:**
+ *
+ * @code{.c}
+ * tiledb_string_t* tdb_string;
+ * tiledb_group_dump_str_v2(ctx, group, &tdb_string);
+ * // Use the string
+ * tiledb_string_free(&tdb_string);
+ * @endcode
+ *
+ * @param ctx The TileDB context.
+ * @param group The group.
+ * @param dump_ascii The output string handle.
+ * @param recursive True if the dump should recurse into subgroups.
+ * @return  `TILEDB_OK` for success and `TILEDB_ERR` for error.
+ */
+TILEDB_EXPORT capi_return_t tiledb_group_dump_str_v2(
+    tiledb_ctx_t* ctx,
+    tiledb_group_t* group,
+    tiledb_string_t** dump_ascii,
     const uint8_t recursive) TILEDB_NOEXCEPT;
 
 /**

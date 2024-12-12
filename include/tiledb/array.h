@@ -663,6 +663,30 @@ class Array {
    *
    * **Example:**
    * @code{.cpp}
+   * tiledb::Array::create(ctx, "s3://bucket-name/array-name", schema);
+   * @endcode
+   *
+   * @param ctx The TileDB context.
+   * @param uri URI where array will be created.
+   * @param schema The array schema.
+   */
+  static void create(
+      const Context& ctx, const std::string& uri, const ArraySchema& schema) {
+    tiledb_ctx_t* c_ctx = ctx.ptr().get();
+    ctx.handle_error(tiledb_array_schema_check(c_ctx, schema.ptr().get()));
+    ctx.handle_error(
+        tiledb_array_create(c_ctx, uri.c_str(), schema.ptr().get()));
+  }
+
+  /**
+   * Creates a new TileDB array given an input schema.
+   *
+   * To create the array, this function uses the context that was used to
+   * instantiate the schema. You are recommended to explicitly pass it with the
+   * overload that takes a context.
+   *
+   * **Example:**
+   * @code{.cpp}
    * tiledb::Array::create("s3://bucket-name/array-name", schema);
    * @endcode
    *
@@ -670,11 +694,7 @@ class Array {
    * @param schema The array schema.
    */
   static void create(const std::string& uri, const ArraySchema& schema) {
-    auto& ctx = schema.context();
-    tiledb_ctx_t* c_ctx = ctx.ptr().get();
-    ctx.handle_error(tiledb_array_schema_check(c_ctx, schema.ptr().get()));
-    ctx.handle_error(
-        tiledb_array_create(c_ctx, uri.c_str(), schema.ptr().get()));
+    create(schema.context(), uri, schema);
   }
 
   /**
@@ -694,6 +714,32 @@ class Array {
     tiledb_array_schema_t* schema;
     ctx.handle_error(
         tiledb_array_schema_load(ctx.ptr().get(), uri.c_str(), &schema));
+    return ArraySchema(ctx, schema);
+  }
+
+  /**
+   * Loads the array schema from an array.
+   * Options to load additional features are read from the optionally-provided
+   * `config`. See `tiledb_array_schema_load_with_config`.
+   *
+   * **Example:**
+   * @code{.cpp}
+   * tiledb::Config config;
+   * config["rest.load_enumerations_on_array_open"] = "true";
+   * auto schema = tiledb::Array::load_schema_with_config(ctx, config,
+   * "s3://bucket-name/array-name");
+   * @endcode
+   *
+   * @param ctx The TileDB context.
+   * @param config The request for additional features.
+   * @param uri The array URI.
+   * @return The loaded ArraySchema object.
+   */
+  static ArraySchema load_schema_with_config(
+      const Context& ctx, const Config& config, const std::string& uri) {
+    tiledb_array_schema_t* schema;
+    ctx.handle_error(tiledb_array_schema_load_with_config(
+        ctx.ptr().get(), config.ptr().get(), uri.c_str(), &schema));
     return ArraySchema(ctx, schema);
   }
 
