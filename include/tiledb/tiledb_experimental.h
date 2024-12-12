@@ -5,8 +5,7 @@
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2017-2021 TileDB, Inc.
- * @copyright Copyright (c) 2016 MIT and Intel Corporation
+ * @copyright Copyright (c) 2017-2024 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,12 +40,18 @@
 /*
  * API sections
  */
+#include "tiledb/api/c_api/array/array_api_experimental.h"
+#include "tiledb/api/c_api/array_schema/array_schema_api_experimental.h"
+#include "tiledb/api/c_api/array_schema_evolution/array_schema_evolution_api_experimental.h"
 #include "tiledb/api/c_api/attribute/attribute_api_external_experimental.h"
+#include "tiledb/api/c_api/context/context_api_experimental.h"
 #include "tiledb/api/c_api/current_domain/current_domain_api_external_experimental.h"
 #include "tiledb/api/c_api/enumeration/enumeration_api_experimental.h"
+#include "tiledb/api/c_api/fragment_info/fragment_info_api_experimental.h"
 #include "tiledb/api/c_api/query_aggregate/query_aggregate_api_external_experimental.h"
 #include "tiledb/api/c_api/query_field/query_field_api_external_experimental.h"
 #include "tiledb/api/c_api/query_plan/query_plan_api_external_experimental.h"
+#include "tiledb/api/c_api/subarray/subarray_api_experimental.h"
 #include "tiledb/api/c_api/vfs/vfs_api_experimental.h"
 #include "tiledb_dimension_label_experimental.h"
 
@@ -97,13 +102,6 @@ tiledb_log_warn(tiledb_ctx_t* ctx, const char* message) TILEDB_NOEXCEPT;
  */
 TILEDB_EXPORT capi_return_t tiledb_as_built_dump(tiledb_string_t** out)
     TILEDB_NOEXCEPT;
-
-/* ********************************* */
-/*      ARRAY SCHEMA EVOLUTION       */
-/* ********************************* */
-
-/** A TileDB array schema. */
-typedef struct tiledb_array_schema_evolution_t tiledb_array_schema_evolution_t;
 
 /**
  * Creates a TileDB schema evolution object.
@@ -340,178 +338,6 @@ TILEDB_EXPORT capi_return_t tiledb_array_schema_evolution_expand_current_domain(
     tiledb_current_domain_t* expanded_domain) TILEDB_NOEXCEPT;
 
 /* ********************************* */
-/*          ARRAY SCHEMA             */
-/* ********************************* */
-
-/**
- * Gets timestamp range in an array schema evolution
- *
- * **Example:**
- *
- * @code{.c}
- * uint64_t timestamp_lo = 0;
- * uint64_t timestamp_hi = 0;
- * tiledb_array_schema_evolution_timestamp_range(ctx,
- * array_schema_evolution, &timestamp_lo, &timestamp_hi);
- * @endcode
- *
- * @param ctx The TileDB context.
- * @param array_schema The array schema object.
- * @param lo The lower bound of timestamp range.
- * @param hi The upper bound of timestamp range.
- * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT int32_t tiledb_array_schema_timestamp_range(
-    tiledb_ctx_t* ctx,
-    tiledb_array_schema_t* array_schema,
-    uint64_t* lo,
-    uint64_t* hi) TILEDB_NOEXCEPT;
-
-/**
- * Adds an enumeration to an array schema.
- *
- * **Example:**
- *
- * @code{.c}
- * tiledb_enumeration_t* enumeration;
- * tiledb_enumeration_alloc(
- *     ctx,
- *     "enumeration_name",
- *     TILEDB_INT64,
- *     1,
- *     FALSE,
- *     data,
- *     data_size,
- *     nullptr,
- *     0,
- *     &enumeration);
- * tiledb_array_schema_add_enumeration(ctx, array_schema, enumeration);
- * @endcode
- *
- * @param ctx The TileDB context.
- * @param array_schema The array schema.
- * @param enumeration The enumeration to add with the attribute
- * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT int32_t tiledb_array_schema_add_enumeration(
-    tiledb_ctx_t* ctx,
-    tiledb_array_schema_t* array_schema,
-    tiledb_enumeration_t* enumeration) TILEDB_NOEXCEPT;
-
-/**
- * Sets the current domain on the array schema
- *
- * **Example:**
- *
- * @code{.c}
- * tiledb_current_domain_t *current_domain;
- * tiledb_current_domain_create(ctx, &current_domain);
- * tiledb_array_schema_set_current_domain(ctx, array_schema, current_domain);
- * @endcode
- *
- * @param ctx The TileDB context.
- * @param array_schema The array schema.
- * @param current_domain The current domain to set on the schema
- * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT int32_t tiledb_array_schema_set_current_domain(
-    tiledb_ctx_t* ctx,
-    tiledb_array_schema_t* array_schema,
-    tiledb_current_domain_t* current_domain) TILEDB_NOEXCEPT;
-
-/**
- * Gets the current domain set on the array schema or
- * creates an empty current domain if none was set.
- * It is the responsability of the caller to free the resources associated
- * with the current domain when the handle isn't needed anymore.
- *
- * **Example:**
- *
- * @code{.c}
- * tiledb_current_domain_t *current_domain;
- * tiledb_array_schema_get_current_domain(ctx, array_schema, &current_domain);
- * tiledb_current_domain_free(&current_domain);
- * @endcode
- *
- * @param ctx The TileDB context.
- * @param array_schema The array schema.
- * @param current_domain The current domain set on the schema
- * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT int32_t tiledb_array_schema_get_current_domain(
-    tiledb_ctx_t* ctx,
-    tiledb_array_schema_t* array_schema,
-    tiledb_current_domain_t** current_domain) TILEDB_NOEXCEPT;
-
-/* ********************************* */
-/*               ARRAY               */
-/* ********************************* */
-
-/**
- * Evolve array schema of an array.
- *
- * **Example:**
- *
- * @code{.c}
- * const char* array_uri="test_array";
- * tiledb_array_evolve(ctx, array_uri,array_schema_evolution);
- * @endcode
- *
- * @param ctx The TileDB context.
- * @param array_uri The uri of the array.
- * @param array_schema_evolution The schema evolution.
- * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT int32_t tiledb_array_evolve(
-    tiledb_ctx_t* ctx,
-    const char* array_uri,
-    tiledb_array_schema_evolution_t* array_schema_evolution) TILEDB_NOEXCEPT;
-
-/**
- * Retrieves an attribute's enumeration given the attribute name (key).
- *
- * **Example:**
- *
- * The following retrieves the first attribute in the schema.
- *
- * @code{.c}
- * tiledb_attribute_t* attr;
- * tiledb_array_schema_get_enumeration(
- *     ctx, array_schema, "attr_0", &enumeration);
- * // Make sure to delete the retrieved attribute in the end.
- * @endcode
- *
- * @param ctx The TileDB context.
- * @param array The TileDB array.
- * @param name The name (key) of the attribute from which to
- * retrieve the enumeration.
- * @param enumeration The enumeration object to retrieve.
- * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT capi_return_t tiledb_array_get_enumeration(
-    tiledb_ctx_t* ctx,
-    const tiledb_array_t* array,
-    const char* name,
-    tiledb_enumeration_t** enumeration) TILEDB_NOEXCEPT;
-
-/**
- * Load all enumerations for the array.
- *
- * **Example:**
- *
- * @code{.c}
- * tiledb_array_load_all_enumerations(ctx, array);
- * @endcode
- *
- * @param ctx The TileDB context.
- * @param array The TileDB array.
- * @param latest_only If non-zero, only load enumerations for the latest schema.
- * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT capi_return_t tiledb_array_load_all_enumerations(
-    tiledb_ctx_t* ctx, const tiledb_array_t* array) TILEDB_NOEXCEPT;
-
-/* ********************************* */
 /*               QUERY               */
 /* ********************************* */
 
@@ -538,18 +364,6 @@ TILEDB_EXPORT int32_t tiledb_query_add_update_value(
     const char* field_name,
     const void* update_value,
     uint64_t update_value_size) TILEDB_NOEXCEPT;
-
-/**
- * Adds point ranges to the given dimension index of the subarray
- * Effectively `add_range(x_i, x_i)` for `count` points in the
- * target array, but set in bulk to amortize expensive steps.
- */
-TILEDB_EXPORT int32_t tiledb_subarray_add_point_ranges(
-    tiledb_ctx_t* ctx,
-    tiledb_subarray_t* subarray,
-    uint32_t dim_idx,
-    const void* start,
-    uint64_t count) TILEDB_NOEXCEPT;
 
 /**
  * Get the number of relevant fragments from the subarray. Should only be
@@ -686,45 +500,8 @@ TILEDB_EXPORT int32_t tiledb_query_get_status_details(
 /*              CONTEXT              */
 /* ********************************* */
 
-/**
- * Creates a TileDB context, which contains the TileDB storage manager
- * that manages everything in the TileDB library. This is a provisional API
- * which returns an error object when the context creation fails. This API will
- * be replaced with a more proper "v2" of context alloc in the near future. The
- * main goal is to use to this to capture potential failures to inform the v2
- * alloc design.
- *
- * **Examples:**
- *
- * Without config (i.e., use default configuration):
- *
- * @code{.c}
- * tiledb_ctx_t* ctx;
- * tiledb_error_t* error;
- * tiledb_ctx_alloc_with_error(NULL, &ctx, &error);
- * @endcode
- *
- * With some config:
- *
- * @code{.c}
- * tiledb_ctx_t* ctx;
- * tiledb_error_t* error;
- * tiledb_ctx_alloc_with_error(config, &ctx, &error);
- * @endcode
- *
- * @param[in] config The configuration parameters (`NULL` means default).
- * @param[out] ctx The TileDB context to be created.
- * @param[out] error Error object returned upon error (`NULL` if there is
- *     no error).
- * @return `TILEDB_OK` for success and `TILEDB_OOM` or `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT capi_return_t tiledb_ctx_alloc_with_error(
-    tiledb_config_t* config,
-    tiledb_ctx_t** ctx,
-    tiledb_error_t** error) TILEDB_NOEXCEPT;
-
 /* ********************************* */
-/*           CONSOLIDATION           */
+/*         ARRAY CONSOLIDATION       */
 /* ********************************* */
 
 /**
@@ -750,12 +527,12 @@ TILEDB_EXPORT capi_return_t tiledb_ctx_alloc_with_error(
  * @param[in] fragment_uris Fragment names of the fragments to consolidate. The
  *     names can be recovered using tiledb_fragment_info_get_fragment_name_v2.
  * @param[in] num_fragments Number of URIs to consolidate.
- * @param config Configuration parameters for the consolidation
+ * @param[in] config Configuration parameters for the consolidation
  *     (`nullptr` means default, which will use the config from \p ctx).
  *
  * @return `TILEDB_OK` on success, and `TILEDB_ERR` on error.
  */
-TILEDB_EXPORT int32_t tiledb_array_consolidate_fragments(
+TILEDB_EXPORT capi_return_t tiledb_array_consolidate_fragments(
     tiledb_ctx_t* ctx,
     const char* array_uri,
     const char** fragment_uris,
@@ -763,198 +540,8 @@ TILEDB_EXPORT int32_t tiledb_array_consolidate_fragments(
     tiledb_config_t* config) TILEDB_NOEXCEPT;
 
 /* ********************************* */
-/*                FILESTORE          */
+/*         CONSOLIDATION PLAN        */
 /* ********************************* */
-
-/**
- * Creates an array schema based on the properties of the provided URI
- * or a default schema if no URI is provided
- * **Example:**
- *
- * @code{.c}
- * tiledb_array_schema_t* schema;
- * tiledb_filestore_schema_create(ctx, "/path/file.pdf", &schema);
- * @endcode
- *
- * @param ctx The TileDB context.
- * @param uri The file URI.
- * @param array_schema The TileDB array schema to be created
- * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT int32_t tiledb_filestore_schema_create(
-    tiledb_ctx_t* ctx,
-    const char* uri,
-    tiledb_array_schema_t** array_schema) TILEDB_NOEXCEPT;
-
-/**
- * Imports a file into a TileDB filestore array
- * **Example:**
- *
- * @code{.c}
- * tiledb_array_schema_t* schema;
- * tiledb_filestore_schema_create(ctx, path_to_file, &schema);
- * tiledb_array_create(ctx, path_to_array, schema);
- * tiledb_filestore_uri_import(ctx, path_to_array, path_to_file,
- * TILEDB_MIME_AUTODETECT);
- * @endcode
- *
- * @param ctx The TileDB context.
- * @param filestore_array_uri The array URI.
- * @param file_uri The file URI.
- * @param mime_type The mime type of the file
- * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT int32_t tiledb_filestore_uri_import(
-    tiledb_ctx_t* ctx,
-    const char* filestore_array_uri,
-    const char* file_uri,
-    tiledb_mime_type_t mime_type) TILEDB_NOEXCEPT;
-
-/**
- * Exports a filestore array into a bare file
- * **Example:**
- *
- * @code{.c}
- * tiledb_filestore_uri_export(ctx, path_to_file, path_to_array);
- * @endcode
- *
- * @param ctx The TileDB context.
- * @param file_uri The file URI.
- * @param filestore_array_uri The array URI.
- * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT int32_t tiledb_filestore_uri_export(
-    tiledb_ctx_t* ctx,
-    const char* file_uri,
-    const char* filestore_array_uri) TILEDB_NOEXCEPT;
-
-/**
- * Writes size bytes starting at address buf into filestore array
- * **Example:**
- *
- * @code{.c}
- * tiledb_array_schema_t* schema;
- * tiledb_filestore_schema_create(ctx, NULL, &schema);
- * tiledb_array_create(ctx, path_to_array, schema);
- * tiledb_filestore_buffer_import(ctx, path_to_array, buf, size,
- * TILEDB_MIME_AUTODETECT);
- * @endcode
- *
- * @param ctx The TileDB context.
- * @param filestore_array_uri The array URI.
- * @param buf The input buffer
- * @param size Number of bytes to be imported
- * @param mime_type The mime type of the data
- * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT int32_t tiledb_filestore_buffer_import(
-    tiledb_ctx_t* ctx,
-    const char* filestore_array_uri,
-    void* buf,
-    size_t size,
-    tiledb_mime_type_t mime_type) TILEDB_NOEXCEPT;
-
-/**
- * Dump the content of a filestore array into a buffer
- * **Example:**
- *
- * @code{.c}
- * size_t size = 1024;
- * void *buf = malloc(size);
- * tiledb_filestore_buffer_export(ctx, path_to_array, 0, buf, size);
- * @endcode
- *
- * @param ctx The TileDB context.
- * @param filestore_array_uri The array URI.
- * @param offset The offset at which we should start exporting from the array
- * @param buf The buffer that will contain the filestore array content
- * @param size The number of bytes to be exported into the buffer
- * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT int32_t tiledb_filestore_buffer_export(
-    tiledb_ctx_t* ctx,
-    const char* filestore_array_uri,
-    size_t offset,
-    void* buf,
-    size_t size) TILEDB_NOEXCEPT;
-
-/**
- * Get the uncompressed size of a filestore array
- * **Example:**
- *
- * @code{.c}
- * size_t size;
- * tiledb_filestore_size(ctx, path_to_array, &size);
- * void *buf = malloc(size);
- * tiledb_filestore_buffer_export(ctx, path_to_array, 0, buf, size);
- * free(buf);
- * @endcode
- *
- * @param[in] ctx The TileDB context.
- * @param[in] filestore_array_uri The array URI.
- * @param[in] size The returned uncompressed size of the filestore array
- * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT int32_t tiledb_filestore_size(
-    tiledb_ctx_t* ctx,
-    const char* filestore_array_uri,
-    size_t* size) TILEDB_NOEXCEPT;
-
-/**
- * Get the string representation of a mime type enum
- *
- * @param mime_type The mime enum
- * @param str The resulted string representation
- * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT int32_t tiledb_mime_type_to_str(
-    tiledb_mime_type_t mime_type, const char** str) TILEDB_NOEXCEPT;
-
-/**
- * Turn a string mime type into a TileDB enum
- *
- * @param str The mime type string
- * @param mime_type The resulted mime enum
- * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT int32_t tiledb_mime_type_from_str(
-    const char* str, tiledb_mime_type_t* mime_type) TILEDB_NOEXCEPT;
-
-/**
- * Retrieves the number of cells written to the fragments by the user.
- *
- * Contributions from each fragment to the total are as described in following.
- *
- * In the case of sparse fragments, this is the number of non-empty
- * cells in the fragment.
- *
- * In the case of dense fragments, TileDB may add fill
- * values to populate partially populated tiles. Those fill values
- * are counted in the returned number of cells. In other words,
- * the cell number is derived from the number of *integral* tiles
- * written in the file.
- *
- * note: The count returned is the cumulative total of cells
- * written to all fragments in the current fragment_info entity,
- * i.e. count may effectively include multiples for any cells that
- * may be overlapping across the various fragments.
- *
- * **Example:**
- *
- * @code{.c}
- * uint64_t cell_num;
- * tiledb_fragment_info_get_total_cell_num(ctx, fragment_info, &cell_num);
- * @endcode
- *
- * @param[in]  ctx The TileDB context
- * @param[in]  fragment_info The fragment info object.
- * @param[out] count The number of cells to be retrieved.
- * @return `TILEDB_OK` for success and `TILEDB_ERR` for error.
- */
-TILEDB_EXPORT int32_t tiledb_fragment_info_get_total_cell_num(
-    tiledb_ctx_t* ctx,
-    tiledb_fragment_info_t* fragment_info,
-    uint64_t* count) TILEDB_NOEXCEPT;
 
 /**
  * Creates a consolidation plan object.

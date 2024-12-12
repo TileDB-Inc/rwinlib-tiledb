@@ -158,7 +158,7 @@ struct ConfigProxy {
  * conf["vfs.s3.region"] = "us-east-1a";
  * conf["vfs.s3.use_virtual_addressing"] = "true";
  * Context ctx(conf);
- * // array/kv operations with ctx
+ * // array operations with ctx
  * @endcode
  * */
 class Config {
@@ -545,6 +545,9 @@ class Config {
    *    The the total maximum size of the read-ahead cache, which is an LRU.
    *    <br>
    *    **Default**: 10485760
+   * -  `vfs.log_operations` <br>
+   *    Enables logging all VFS operations in trace mode. <br>
+   *    **Default**: false
    * - `vfs.min_parallel_size` <br>
    *    The minimum number of bytes in a parallel VFS operation
    *    (except parallel S3 writes, which are controlled by
@@ -668,7 +671,10 @@ class Config {
    *    **Default**: "10737418240"
    * - `vfs.s3.region` <br>
    *    The S3 region, if S3 is enabled. <br>
-   *    **Default**: us-east-1
+   *    If empty, the region will be determined by the AWS SDK using sources
+   *    such as environment variables, profile configuration, or instance
+   *    metadata. <br>
+   *    **Default**: ""
    * - `vfs.s3.aws_access_key_id` <br>
    *    Set the AWS_ACCESS_KEY_ID <br>
    *    **Default**: ""
@@ -910,6 +916,9 @@ class Config {
    *    Set curl to run in verbose mode for REST requests <br>
    *    curl will print to stdout with this option
    *    **Default**: false
+   * -  `rest.curl.tcp_keepalive` <br>
+   *    Set curl to use TCP keepalive for REST requests <br>
+   *    **Default**: true
    * - `rest.load_metadata_on_array_open` <br>
    *    If true, array metadata will be loaded and sent to server together with
    *    the open array <br>
@@ -918,6 +927,14 @@ class Config {
    *    If true, array non empty domain will be loaded and sent to server
    *    together with the open array <br>
    *    **Default**: true
+   * - `rest.load_enumerations_on_array_open` <br>
+   *    If true, enumerations will be loaded for the latest array schema on
+   *    array open.
+   *    **Default**: false
+   * - `rest.load_enumerations_on_array_open_all_schemas` <br>
+   *    If true, enumerations will be loaded for all array schemas on array
+   *    open.
+   *    **Default**: false
    * - `rest.use_refactored_array_open` <br>
    *    If true, the new REST routes and APIs for opening an array will be used
    *    <br>
