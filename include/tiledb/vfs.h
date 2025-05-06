@@ -293,7 +293,7 @@ class VFSFilebuf : public std::streambuf {
 /**
  * Implements a virtual filesystem that enables performing directory/file
  * operations with a unified API on different filesystems, such as local
- * posix/windows, HDFS, AWS S3, etc.
+ * posix/windows, S3, etc.
  */
 class VFS {
  public:
@@ -519,7 +519,8 @@ class VFS {
         ctx.ptr().get(), vfs_.get(), old_uri.c_str(), new_uri.c_str()));
   }
 
-  /** Touches a file with the input URI, i.e., creates a new empty file. */
+  /** Touches a file with the input URI, i.e., creates a new empty file if it
+   * does not already exist. */
   void touch(const std::string& uri) const {
     auto& ctx = ctx_.get();
     ctx.handle_error(

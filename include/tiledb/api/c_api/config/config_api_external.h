@@ -5,7 +5,7 @@
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2023 TileDB, Inc.
+ * @copyright Copyright (c) 2023-2024 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -257,6 +257,16 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  *    Which reader to use for sparse global order queries. "refactored"
  *    or "legacy".<br>
  *    **Default**: refactored
+ * - `sm.query.sparse_global_order.preprocess_tile_merge` <br>
+ *    **Experimental for testing purposes, do not use.**<br>
+ *    Performance configuration for sparse global order read queries.
+ *    If nonzero, prior to loading the first tiles, the reader will run
+ *    a preprocessing step to arrange tiles from all fragments in a single
+ *    globally ordered list. This is expected to improve performance when
+ *    there are many fragments or when the distribution in space of the
+ *    tiles amongst the fragments is skewed. The value of the parameter
+ *    specifies the amount of work per parallel task.
+ *    **Default**: "32768"
  * - `sm.query.sparse_unordered_with_dups.reader` <br>
  *    Which reader to use for sparse unordered with dups queries.
  *    "refactored" or "legacy".<br>
@@ -455,6 +465,9 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  *    The maximum permissible delay between Azure netwwork request retry
  *    attempts, in milliseconds.
  *    **Default**: 60000
+ * - `vfs.gcs.endpoint` <br>
+ *    The GCS endpoint. <br>
+ *    **Default**: ""
  * - `vfs.gcs.project_id` <br>
  *    Set the GCS project ID to create new buckets to. Not required unless you
  *    are going to use the VFS to create buckets. <br>
@@ -672,15 +685,6 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  *    When set to `true`, the S3 SDK uses a handler that ignores SIGPIPE
  *    signals.
  *    **Default**: "true"
- * - `vfs.hdfs.name_node_uri` <br>
- *    Name node for HDFS. <br>
- *    **Default**: ""
- * - `vfs.hdfs.username` <br>
- *    HDFS username. <br>
- *    **Default**: ""
- * - `vfs.hdfs.kerb_ticket_cache_path` <br>
- *    HDFS kerb ticket cache path. <br>
- *    **Default**: ""
  * - `config.env_var_prefix` <br>
  *    Prefix of environmental variables for reading configuration
  *    parameters. <br>
@@ -754,8 +758,12 @@ TILEDB_EXPORT void tiledb_config_free(tiledb_config_t** config) TILEDB_NOEXCEPT;
  *    with the open array <br>
  *    **Default**: true
  * - `rest.load_enumerations_on_array_open` <br>
- *    If true, enumerations will be loaded and sent to server together with
- *    the open array.
+ *    If true, enumerations will be loaded for the latest array schema and
+ *    sent to server together with the open array.
+ *    **Default**: false
+ * - `rest.load_enumerations_on_array_open_all_schemas` <br>
+ *    If true, enumerations will be loaded for all schemas and sent to server
+ *    together with the open array.
  *    **Default**: false
  * - `rest.use_refactored_array_open` <br>
  *    If true, the new REST routes and APIs for opening an array

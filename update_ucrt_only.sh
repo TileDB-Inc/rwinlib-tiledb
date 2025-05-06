@@ -36,12 +36,11 @@ done
 # rm -rf mingw64
 # rm -v mingw-w64-x86_64-tiledb-2.9000-1-any.pkg.tar.xz
 
-tar xaf mingw-w64-ucrt-x86_64-tiledb-2.9000-1-any.pkg.tar.xz
+tar xaf tiledb-windows-x86_64-mingw64_ucrt64-release-2.28-4764907.tar.xz
 rsync -cav ucrt64/include/tiledb/ include/tiledb/
 #rsync -cav ucrt64/lib/libtiledbstatic.a lib/x64-ucrt/libtiledbstatic.a
 rsync -cav ucrt64/lib/lib*.a lib/x64-ucrt/
 rm -rf ucrt64
-rm -v mingw-w64-ucrt-x86_64-tiledb-2.9000-1-any.pkg.tar.xz
-
+rm -v tiledb-windows-x86_64-mingw64_ucrt64-release-2.28-4764907.tar.xz
 
 rm .BUILDINFO .MTREE .PKGINFO
