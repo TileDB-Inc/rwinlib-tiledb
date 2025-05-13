@@ -9,9 +9,9 @@ set -x
 ##
 ## And now also updated for 'ucrt' builds
 ##
-for f in mingw-w64-ucrt64-tiledb.zip; do
+for f in release-windows-x86_64-mingw64_ucrt64-release-2.28-4764907.zip; do
 #for f in mingw-w64-MINGW32-tiledb.zip mingw-w64-MINGW64-tiledb.zip mingw-w64-ucrt64-tiledb.zip; do
-    mv -v ~/Downloads/${f} .
+    cp ~/Downloads/${f} .
     unzip ${f}
     rm ${f}
 done
