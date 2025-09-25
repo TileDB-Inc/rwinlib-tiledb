@@ -5,7 +5,7 @@
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2017-2024 TileDB, Inc.
+ * @copyright Copyright (c) 2017-2025 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +38,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -858,7 +859,7 @@ class Config {
    *    signals.
    *    **Default**: "true"
    * - `config.env_var_prefix` <br>
-   *    Prefix of environmental variables for reading configuration
+   *    Prefix of environment variables for reading configuration
    *    parameters. <br>
    *    **Default**: "TILEDB_"
    * - `config.logging_level` <br>
@@ -869,6 +870,12 @@ class Config {
    * - `config.logging_format` <br>
    *    The logging format configured (DEFAULT or JSON)
    *    **Default**: "DEFAULT"
+   * - `profile_name` <br>
+   *    The name of the Profile to be used for REST configuration. <br>
+   *    **Default**: ""
+   * - `profile_dir` <br>
+   *    The directory where the user profiles are stored. <br>
+   *    **Default**: ""
    * - `rest.server_address` <br>
    *    URL for REST server to use for remote arrays. <br>
    *    **Default**: "https://api.tiledb.com"
