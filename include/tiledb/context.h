@@ -79,13 +79,9 @@ class Context {
    * Constructor. Creates a TileDB Context with default configuration.
    * @throws TileDBError if construction fails
    */
-  Context() {
-    tiledb_ctx_t* ctx;
-    if (tiledb_ctx_alloc(nullptr, &ctx) != TILEDB_OK)
-      throw TileDBError("[TileDB::C++API] Error: Failed to create context");
-    ctx_ = std::shared_ptr<tiledb_ctx_t>(ctx, Context::free);
-    error_handler_ = default_error_handler;
-
+  Context()
+      : ctx_(make_ctx(nullptr))
+      , error_handler_(default_error_handler) {
     set_tag("x-tiledb-api-language", "c++");
   }
 
@@ -93,13 +89,9 @@ class Context {
    * Constructor. Creates a TileDB context with the given configuration.
    * @throws TileDBError if construction fails
    */
-  explicit Context(const Config& config) {
-    tiledb_ctx_t* ctx;
-    if (tiledb_ctx_alloc(config.ptr().get(), &ctx) != TILEDB_OK)
-      throw TileDBError("[TileDB::C++API] Error: Failed to create context");
-    ctx_ = std::shared_ptr<tiledb_ctx_t>(ctx, Context::free);
-    error_handler_ = default_error_handler;
-
+  explicit Context(const Config& config)
+      : ctx_(make_ctx(config.ptr().get()))
+      , error_handler_(default_error_handler) {
     set_tag("x-tiledb-api-language", "c++");
   }
 
@@ -229,6 +221,35 @@ class Context {
     handle_error(tiledb_ctx_set_tag(ctx_.get(), key.c_str(), value.c_str()));
   }
 
+  /**
+   * Data protocol version enum.
+   */
+  enum class DataProtocol : uint8_t {
+    /** Data protocol v2 (legacy) */
+    v2 = TILEDB_DATA_PROTOCOL_v2,
+    /** Data protocol v3 (TileDB 3.0+) */
+    v3 = TILEDB_DATA_PROTOCOL_v3
+  };
+
+  /**
+   * Returns the data protocol version for the given URI.
+   *
+   * **Example:**
+   * @code{.cpp}
+   * tiledb::Context ctx;
+   * auto data_protocol = ctx.data_protocol("tiledb://namespace/array");
+   * @endcode
+   *
+   * @param uri The URI to check.
+   * @return The data protocol version.
+   */
+  DataProtocol data_protocol(const std::string& uri) const {
+    tiledb_data_protocol_t protocol;
+    handle_error(
+        tiledb_ctx_get_data_protocol(ctx_.get(), uri.c_str(), &protocol));
+    return static_cast<DataProtocol>(protocol);
+  }
+
   /** Returns a JSON-formatted string of the stats. */
   std::string stats() {
     char* c_str;
@@ -263,6 +284,21 @@ class Context {
 
   /** An error handler callback. */
   std::function<void(const std::string&)> error_handler_;
+
+  static std::shared_ptr<tiledb_ctx_t> make_ctx(tiledb_config_t* config) {
+    tiledb_ctx_t* ctx;
+    tiledb_error_t* err;
+    tiledb_ctx_alloc_with_error(config, &ctx, &err);
+    if (err != nullptr) {
+      const char* msg_cstr;
+      tiledb_error_message(err, &msg_cstr);
+      std::string msg = "[TileDB::C++API] Error: Failed to create context: " +
+                        std::string(msg_cstr);
+      tiledb_error_free(&err);
+      throw TileDBError(msg);
+    }
+    return std::shared_ptr<tiledb_ctx_t>(ctx, Context::free);
+  }
 
   /** Wrapper function for freeing a context C object. */
   static void free(tiledb_ctx_t* ctx) {
