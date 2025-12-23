@@ -9,7 +9,7 @@ set -x
 ##
 ## And now also updated for 'ucrt' builds
 ##
-for f in release-windows-x86_64-mingw64_ucrt64-2.30.0-9b5305d.zip; do
+for f in release-windows-x86_64-mingw64_ucrt64-release-2.30-rtools-4.3-3a4d7b0.zip; do
 #for f in mingw-w64-MINGW32-tiledb.zip mingw-w64-MINGW64-tiledb.zip mingw-w64-ucrt64-tiledb.zip; do
     cp ~/Downloads/${f} .
     unzip ${f}
@@ -36,7 +36,7 @@ done
 # rm -rf mingw64
 # rm -v mingw-w64-x86_64-tiledb-2.9000-1-any.pkg.tar.xz
 
-tar xaf tiledb-windows-x86_64-mingw64_ucrt64-2.30.0-9b5305d.tar.xz
+tar xaf tiledb-windows-x86_64-mingw64_ucrt64-release-2.30-rtools-4.3-3a4d7b0.tar.zst
 rsync -cav ucrt64/include/tiledb/ include/tiledb/
 #rsync -cav ucrt64/lib/libtiledbstatic.a lib/x64-ucrt/libtiledbstatic.a
 rsync -cav ucrt64/lib/lib*.a lib/x64-ucrt/

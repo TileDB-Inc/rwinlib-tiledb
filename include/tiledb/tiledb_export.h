@@ -22,7 +22,7 @@
 #endif
 
 #ifndef TILEDB_DEPRECATED
-#  define TILEDB_DEPRECATED __attribute__ ((__deprecated__))
+#  define TILEDB_DEPRECATED __declspec(deprecated)
 #endif
 
 #ifndef TILEDB_DEPRECATED_EXPORT
@@ -33,6 +33,7 @@
 #  define TILEDB_DEPRECATED_NO_EXPORT TILEDB_NO_EXPORT TILEDB_DEPRECATED
 #endif
 
+/* NOLINTNEXTLINE(readability-avoid-unconditional-preprocessor-if) */
 #if 0 /* DEFINE_NO_DEPRECATED */
 #  ifndef TILEDB_NO_DEPRECATED
 #    define TILEDB_NO_DEPRECATED
